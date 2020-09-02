@@ -1,0 +1,142 @@
+---
+title: "Assignment 3"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+#1. Using the 173 majors listed in fivethirtyeight.com’s College Majors dataset [https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/], provide code that identifies the majors that contain either "DATA" or "STATISTICS"
+
+```{r college-majors}
+library(readr)
+library(RCurl)
+library(dplyr)
+majorsList <- read.csv(url('https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/majors-list.csv'), stringsAsFactors = F)
+str(majorsList)
+datamajor <- majorsList$Major[grepl("DATA", majorsList$Major)]; datamajor
+statsmajor <- majorsList$Major[grepl("STATISTICS", majorsList$Major)]; statsmajor
+```
+#2 Write code that transforms the data below:
+
+[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
+
+[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"  
+
+[9] "elderberry"   "lime"         "lychee"       "mulberry"    
+
+[13] "olive"        "salal berry"
+
+Into a format like this:
+
+c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")
+
+```{r pressure, echo=FALSE}
+library(stringr)
+library(tidyverse)
+
+#Original list of vegetables/fruits
+
+produce_list <- '[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
+[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"
+[9] "elderberry"   "lime"         "lychee"       "mulberry"
+[13] "olive"        "salal berry"'
+
+#Single regular expression
+
+transformed_list <- str_extract_all(produce_list, '[a-z]+\\s[a-z]+|[a-z]+'); transformed_list
+final_list <- gsub('[\"]', '', transformed_list); final_list
+```
+
+#3 Describe, in words, what these expressions will match:
+
+(.)\1\1 - The dot matches a single character, except newline. The backreference \1 references the first capturing group and matches the exact same text that was matched by the first capturing group. Here the backreference is repeated twice, in essence the single character is repeated three times.
+
+```{r}
+library(tidyverse)
+library(stringr)
+
+a <- c("aaa", "bbbb", "adadad", "ghfdaert")
+part31 <- str_extract(a, "(.)\\1\\1"); part31
+
+```
+
+"(.)(.)\\2\\1" - This signified a pair of characters followed by the same pair in reverse order.
+
+```{r}
+library(tidyverse)
+library(stringr)
+
+b <- c("abba", "baooab", "garrison", "aabbcdeffgg")
+part32 <- str_extract(b, "(.)(.)\\2\\1"); part32
+
+```
+
+(..)\1 - This finds a repeated pair of characters.
+
+```{r}
+library(tidyverse)
+library(stringr)
+
+c <- c("kitchen", "banana", "ccfcfcff", "aabbcdeffgg")
+part33 <- str_extract(c, "(..)\\1"); part33
+```
+
+"(.).\\1.\\1" - A character followed by another character (non-matching), followed by the original character (\1) and any other character as signified by the period and finally ending with the original character.
+
+```{r}
+library(tidyverse)
+library(stringr)
+
+d <- c("kitchen", "banana", "malayalam", "aabbcdeffgg")
+part34 <- str_extract(d, "(.).\\1.\\1"); part34
+```
+
+"(.)(.)(.).*\\3\\2\\1" - The * signifies 0 or more times, so this expression signifies any 3 characters followed by none or more characters of any kind with the original three characters repeated in the reverse order.
+
+```{r}
+library(tidyverse)
+library(stringr)
+
+e <- c("kitchen", "abcdcba", "malayalam", "bcddcb")
+part35 <- str_extract(e, "(.)(.)(.).*\\3\\2\\1"); part35
+```
+
+
+#4 Construct regular expressions to match words that:
+
+Start and end with the same character.
+Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)
+Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)
+
+```{r}
+#Part I: Start and end with the same character.
+
+library(tidyverse)
+library(stringr)
+
+x <- c("america", "russia", "armenia", "canada")
+part1 <- str_extract(x, '^(.).*\\1$'); part1
+
+#Part II: Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)
+
+y <- c("aabbccaa", "abcdefg", "aaa", "abac", "bbbbbb")
+part2 <- str_extract(y, '(..).*\\1'); part2
+
+#Part III: Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)
+
+z <- c("bookkeeper", "successful", "tattoo", "dog", "cat")
+part3 <- str_extract(z, '([a-z]).*\\1.*\\1'); part3
+
+```
+
+
