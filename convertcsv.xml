@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <row>
+    <Book Name>The Romanov Sisters</Book Name>
+    <Book Author>Helen Rappaport</Book Author>
+    <Topic>Russian History</Topic>
+    <Pages>500</Pages>
+  </row>
+  <row>
+    <Book Name>The Russian Revolution</Book Name>
+    <Book Author>Oliver Figue, Sebastian Polet</Book Author>
+    <Topic>Russian History</Topic>
+    <Pages>1000</Pages>
+  </row>
+  <row>
+    <Book Name>Just Send Me Word</Book Name>
+    <Book Author>Oliver Figue</Book Author>
+    <Topic>Russian History</Topic>
+    <Pages>500</Pages>
+  </row>
+  <row>
+    <Book Name>Midnight at Chernobyl</Book Name>
+    <Book Author>Adam Fast</Book Author>
+    <Topic>Russian History</Topic>
+    <Pages>500</Pages>
+  </row>
+</root>
