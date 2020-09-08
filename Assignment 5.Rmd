@@ -1,0 +1,82 @@
+---
+title: "Assignment 5"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+##Read in the untidy file - The input file is created as instructed in the assignment and uploaded to github. The file is read in using the read_csv function from the url.
+
+```{r airlines}
+library(readr)
+library(RCurl)
+url <- getURLContent("https://raw.githubusercontent.com/tponnada/DATA607/master/Ifile.csv")
+airline <- read_csv(url)
+airline
+```
+
+##Data cleansing
+
+##Step 1: There is missing data in the first column where airline name is not repeated for each row; also an empty row between the two airlines is filled with NA's when read in from the csv file, both of these issues need to be cleaned up. Note: The na's can also be removed using the na.rm = TRUE argument of the gather function below.
+
+```{r pressure, echo=FALSE}
+library(tidyr)
+airline_clean1 <- na.omit(airline %>% fill(X1)); airline_clean1
+```
+
+##Step 2: The dataset has four variables - airline name, arrival delay status (on time or delayed), destination airport (Los Angeles, Phoenix, San Diego, San Francisco and Seattle) as well as counts/frequency. To tidy it, we need to melt, or stack it. In other words, we need to turn columns into rows. Melting is parameterised by a list of columns that are already variables, or colvars for short. In this example, the colvars are airline name. The individual destination columns are melted into two variables: a new variable called "Destination" and a new variable called "Value" that contains the concatenated arrival delay counts by destination that were previously separated into individual columns. However, this form is not yet tidy because we have two variables stored in rows: "on time" and "delayed". This needs to be cast.
+
+```{r}
+airline_clean2 <- gather(airline_clean1, "Destination", "Value", 3:7, na.rm = TRUE); airline_clean2
+```
+
+##Step 3: Casting the X2 column. Steps 2 and 3 make the data tidy. There is one variable in each column and each row represents an observation. The final step is to clean the column names using the rename() function. We use this to give an informative name to column X1, and change to a consistent naming convention for the other columns. 
+
+```{r}
+library(tidyverse)
+airline_clean3 <- spread(airline_clean2, "X2", "Value"); airline_clean3
+airline_clean4 <- rename(airline_clean3, Airline_carrier = "X1", Arrival_delay = "delayed", On_Time = "on time"); airline_clean4 
+```
+
+##Step 4: We used the tidy dataset above to perform the analysis asked in the assignment which is comparing the arrival delay for the two airlines. We have three variables and three comparisons available - Total number of flights that arrived late by carrier, number of flights that arrived late by destination and then combining carrier and destination, number of flights by carrier that arrived late at each destination.
+
+##Looking at the carrier level first, Alaska airlines had fewer arrival delays as measured by the mean and the median compared to AM West, it also had a lower standard deviation or uncertainty. Second, the arrival delay at destination alone tells us that the mean delay was lowest at San Diego while the highest mean arrival delay was experienced at Phoenix which also had the highest standard deviation but this doesn't tell us much about which of the carrier's flights were responsible for skewing the delays at each airport. For this, we look at the last grouping - delays grouped by destination and carrier, which shows that at 4 of the 5 airports, Alaska airlines had fewer average arrival delays than AM West. Seattle was the only airport where the average number of flights for Alaska reported more delays than for AM West.
+
+```{r}
+visualize1 <- airline_clean4 %>%
+  group_by(Airline_carrier) %>%
+  summarise(mean_delay1 = mean(Arrival_delay), median_delay1 = median(Arrival_delay), sd_delay1 = sd(Arrival_delay), sum = sum(Arrival_delay))
+visualize1
+
+airline_clean4 %>%
+  group_by(Destination) %>%
+  summarise(mean_delay2 = mean(Arrival_delay), sd_delay2 = sd(Arrival_delay), sum2 = sum(Arrival_delay))
+
+visualize2 <- airline_clean4 %>%
+  group_by(Destination, Airline_carrier) %>%
+  summarise(mean_delay3 = mean(Arrival_delay))
+visualize2
+```
+
+##Step 5: We visualize by plotting the graphs for first mean arrival delay by carrier which as two points is not very informative. Secondly, looking at delays by destination and carrier as calculated above, we see that visually AM West flights on average experienced a high incidence of arrival delays at Phoenix which is it's hub airport and similarly, Alaska Airlines experienced a high incidence of arrival delays on average at its hub Seattle airport. 
+
+##Conclusion: Ultimately, the analysis from the data and the graphs above makes business sense, as a carrier is likley to experience more number of flight delays at its busiest hub airport which this analysis confirms for the case of Alaska and AM West airlines. This is the explanation for the overall discrepancy between the per-city and the overall performance. 
+
+```{r}
+library(ggplot2)
+ggplot(data = visualize1) + geom_point(aes(x = Airline_carrier, y = mean_delay1))
+ggplot(data = visualize2, aes(x = Destination, y = mean_delay3)) + geom_line(aes(color = factor(Airline_carrier), group = Airline_carrier))
+```
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
