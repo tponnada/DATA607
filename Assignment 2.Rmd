@@ -1,0 +1,61 @@
+---
+title: "Assignment 2"
+author: "TJ Parker"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+#Installing and Loading the required packages
+library(tidyverse)
+library(RMySQL)
+
+#Connecting to the database - MySQL, created a new connection with the Login Name: dbuser and Password: cunyspsdata607. This would be one way to share just this connection with relevant users
+
+mydb = dbConnect(MySQL(),user='dbuser',password='cunyspsdata607',dbname='movies',host='localhost')
+dbListTables(mydb)
+```
+
+## Purpose
+
+Choose six recent popular movies. Ask at least five people that you know (friends, family, classmates, imaginary friends if necessary) to rate each of these movies that they have seen on a scale of 1 to 5. Take the results (observations) and store them in a SQL database of your choosing. Load the information from the SQL database into an R dataframe.
+
+## Introduction
+
+There are three different tables movie, rating and reviewer. movie_id is the primary key in the movie table, reviewer_id is the primary key in the reviewer table and rating_id is the primary key in the rating table. The rating table references movie_id and reviewer_id as foreign keys. These are the normalized set of tables that correspond to the relationship between reviewers, movies and the ratings that they provide. I have not set missing values to 0 since it might skew the averages.
+
+```{r avg_movie_review}
+
+#Load the information from the three SQL tables into an R dataframe using the select statement.
+
+getresults <- data.frame(dbGetQuery(mydb, "Select movie_name, reviewer_last_name, reviewer_first_name, rating 
+        from movie, reviewer, rating
+        where movie.movie_id = rating.movie_id and
+        reviewer.reviewer_id = rating.reviewer_id
+        order by movie_name, reviewer_last_name, reviewer_first_name, rating"))
+
+#Display results of the resultant dataframe
+
+getresults
+
+#Group results by movie name, this is helpful at first glance to retrieve ratings by reviewer for each movie.
+
+gb_movie_name <- group_by(getresults, movie_name)
+
+#But what would be really useful is to see the average rating for each movie...
+
+avg_movie_review <- summarize(gb_movie_name, count = n(), rating = mean(round(rating), na.rm=TRUE))
+avg_movie_review
+
+#Finally, we plot and analyze the data. Among the survey responses, The King's Speech had the highest rating while Almost Famous came a close second.
+
+ggplot(data = avg_movie_review) + geom_bar(mapping = aes(x = movie_name, y = rating), stat = "identity")
+
+```
+
+## Conclusion
+
+Based on the ratings above and using an average threshold of 3, I would recommend the movies Almost Famous, The King's Speech, Slumdog Millionaire and Tesla assuming that any reviewers who haven't rated these movies have actually not watched them. Reviewer #3 liked AM and TKS, so I would recommend Slumdog Millionaire and Tesla to him. Similarly, I would recommend Almost Famous to Reviewer #1 since he's watched the other three movies. Recommending movies to Reviewer #2 is tough since he rated both Slumdog Millionaire and The English Patient at below-average ratings of 1.7 and 1.5, so the similarity algorithm may not hold good in this scenario. Since raters who reviewed Slumdog Millionaire highly also gave above-average ratings to Almost Famous and The King's Speech, it is difficult to recommend the later two movies as recommendations for Reviewer #2. Reviewer #4 has only watched Almost Famous, so I would recommend the remaining three movies - Slumdog Millionaire, Tesla and The King's Speech based on the similarity data mining approach. Finally, I would recommend that Reviewer #5 watch Almost Famous, since he's watched the other three movies. Since no single reviewer rated the movie Titanic, it has not been recommended as a movie to any reviewer. This could be considered as the target variable for whom an observation is not yet available in this training data set.
+
+
