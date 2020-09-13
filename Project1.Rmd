@@ -1,0 +1,110 @@
+---
+title: "DATA607 Project1"
+author:   "TJ Parker"
+
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Purpose
+
+The purpose is to read in the chess tournament text file, create a R Markdown file that generates a .csv file output with the following information for all of the players: Player’s Name, Player’s State, Total Number of Points, Player’s Pre-Rating, and Average Pre Chess Rating of Opponents.
+
+## Load the dataset
+
+Read in the file using read_delim. Per the R4DS book, read_delim can be used to read in a file with any delimiter. Here the delimiter is "|". I chose to skip the first 4 lines and instead provide column names as indicated below. There is also an option to remove comment lines with the use of the comment = '-' argument but when I used this, it seemed to remove some of the data in the text file. Specifically for record #28 - SOFIA ADINA STANESCU-BELLU, using the comment argument removed valid values and filled in NA's for values. The raw input file is saved on github and was read in from there - https://raw.githubusercontent.com/tponnada/DATA607/master/tournamentinfo.txt.
+
+
+```{r chess, results="hide"}
+library(tidyverse)
+field_names <- c("PairNumber", "PlayerName", "TotalPoints", "R1", "R2", "R3", "R4", "R5", "R6", "R7")
+chess <- read_delim("https://raw.githubusercontent.com/tponnada/DATA607/master/tournamentinfo.txt", delim = "|", col_names = field_names, skip = 4)
+chess
+```
+
+## Pre-processing Step 1
+
+This is where I begin to extract individual column values, Chapter 8 of Automated Data Collection was very helpful and I've kept the regex's very simple. Also, although the file can be read in by trimming white spaces using the trim_ws argument in the read_delim function, when I tried to do this, I received errors when parsing out contents later. So, I've followed the aproach of trimming white spaces after the column values have been read in using the str_trim function where necessary. I had to follow two phases of parsing here, first I was able to easily parse out Player Number, Player State, Player Name, Total Points, Pre-Rating, Post_rating and USCFID and created a table called chess_table.
+
+```{r process1, results = "hide"}
+library(stringr)
+number <- unlist(str_extract_all(chess$PairNumber, "[[:digit:]]+"))
+PairNumber <- str_trim(number); PairNumber
+state <- unlist(str_extract_all(chess$PairNumber, "([[:upper:]]){2}"))
+PlayerState <- str_trim(state); PlayerState
+name <- unlist(str_extract_all(chess, "([[:upper:]]+[[:blank:]]){2,}"))
+PlayerName <- str_trim(name); PlayerName
+Total_points <- unlist(str_extract_all(chess, "[[:digit:]]\\.[[:digit:]]")); Total_points
+Pre_rating1 <- unlist(str_extract_all(chess, ":[[:blank:]]+[[:digit:]]{3,}"))
+Pre_rating <- unlist(str_extract_all(Pre_rating1, "[[:digit:]]{3,}")); Pre_rating
+Post_rating1 <- unlist(str_extract_all(chess, ">[[:blank:]]?[[:digit:]]{3,}"))
+Post_rating <- unlist(str_extract_all(Post_rating1, "[[:digit:]]{3,}")); Post_rating
+USCFID <- unlist(str_extract_all(chess, "[[:digit:]]{8}")); USCFID
+chess_table <- data.frame(PairNumber, PlayerName, PlayerState, USCFID, Total_points, Pre_rating, Post_rating); chess_table
+```
+
+## Pre-processing Step 2
+
+Then I went back, read in the original data frame named chess and removed the lines with dashes and also the second row for each player (since I've extracted the State, USCFID, Pre_rating and Post_rating information from these rows in Step # 1, these second rows for each player can now be eliminated). Otherwise I'm unable to parse out only the WDLBHUX lines on the first row for each player and ignore the BHUX lines on the second row which don't have any opponent information. At the end of this set of processing steps, I get a table with one record for each player with all variable data in columns for that player.
+
+```{r process2, results = "hide"}
+chess_table1 <- chess[!grepl('----', chess$PairNumber),]; chess_table1
+chess_table2 <- chess_table1[!grepl('R:', chess_table1$PlayerName),]; chess_table2
+R1 <- unlist(str_extract_all(chess_table2$R1, "[WDL][[:blank:]]+[[:digit:]]+|[BHUX][[:blank:]]+"));R1
+R2 <- unlist(str_extract_all(chess_table2$R2, "[WDL][[:blank:]]+[[:digit:]]+|[BHUX][[:blank:]]+")); R2
+R3 <- unlist(str_extract_all(chess_table2$R3, "[WDL][[:blank:]]+[[:digit:]]+|[BHUX][[:blank:]]+")); R3
+R4 <- unlist(str_extract_all(chess_table2$R4, "[WDL][[:blank:]]+[[:digit:]]+|[BHUX][[:blank:]]+")); R4
+R5 <- unlist(str_extract_all(chess_table2$R5, "[WDL][[:blank:]]+[[:digit:]]+|[BHUX][[:blank:]]+")); R5
+R6 <- unlist(str_extract_all(chess_table2$R6, "[WDL][[:blank:]]+[[:digit:]]+|[BHUX][[:blank:]]+")); R6
+R7 <- unlist(str_extract_all(chess_table2$R7, "[WDL][[:blank:]]+[[:digit:]]+|[BHUX][[:blank:]]+")); R7
+chess_table2 <- data.frame(PairNumber, PlayerName, PlayerState, USCFID, Total_points, Pre_rating, Post_rating, R1, R2, R3, R4, R5, R6, R7); chess_table2
+```
+
+## Calculate the average pre chess rating of opponents 
+
+Although I have all the columns now in one row per observation from Step #2, I actually need to extract just the opponent numbers for each round from the string which starts at position 3 for a 2-digit PairNumber and at position 4 for an opponent with a 1-digit PairNumber. I convert these opponent numbers from character to numeric and use them to retrieve the pre_ratings for the opponents for each player in each round. I used the simple for loop and there is probably some redundancy in code. 
+
+```{r calculate, results = "hide"}
+R1opp <- as.numeric(substring(chess_table2$R1,3)); R1opp
+R2opp <- as.numeric(substring(chess_table2$R2,3)); R2opp
+R3opp <- as.numeric(substring(chess_table2$R3,3)); R3opp
+R4opp <- as.numeric(substring(chess_table2$R4,3)); R4opp
+R5opp <- as.numeric(substring(chess_table2$R5,3)); R5opp
+R6opp <- as.numeric(substring(chess_table2$R6,3)); R6opp
+R7opp <- as.numeric(substring(chess_table2$R7,3)); R7opp
+
+for (i in 1:64) {
+  
+  chess_table2$R1oppscore[i] <- as.numeric(chess_table2$Pre_rating[R1opp[i]]); chess_table2$R1oppscore
+  chess_table2$R2oppscore[i] <- as.numeric(chess_table2$Pre_rating[R2opp[i]]); chess_table2$R2oppscore
+  chess_table2$R3oppscore[i] <- as.numeric(chess_table2$Pre_rating[R3opp[i]]); chess_table2$R3oppscore
+  chess_table2$R4oppscore[i] <- as.numeric(chess_table2$Pre_rating[R4opp[i]]); chess_table2$R4oppscore
+  chess_table2$R5oppscore[i] <- as.numeric(chess_table2$Pre_rating[R5opp[i]]); chess_table2$R5oppscore
+  chess_table2$R6oppscore[i] <- as.numeric(chess_table2$Pre_rating[R6opp[i]]); chess_table2$R6oppscore
+  chess_table2$R7oppscore[i] <- as.numeric(chess_table2$Pre_rating[R7opp[i]]); chess_table2$R7oppscore
+  
+}
+
+for (i in 1:64) {
+
+  chess_table2$oppaverating[i] <- round(rowMeans(chess_table2[i, 15:21], na.rm = TRUE))
+  
+}
+Average_rating <- chess_table2$oppaverating
+```
+
+## Prepare and write to the output
+
+Write to output file using write_csv function. But, first, I pull in the columns I need.
+
+```{r output, results = "hide"}
+output <- data.frame(PairNumber, PlayerName, PlayerState, USCFID, Total_points, Pre_rating, Post_rating,Average_rating) 
+write_csv(output, "/Users/tponnada/Desktop/DATA607/TJPfile.csv")
+```
+
+
