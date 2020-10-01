@@ -1,0 +1,225 @@
+---
+title: "Project 2"
+author: "TJ Parker"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Purpose
+
+(1) Choose any three of the “wide” datasets identified in the Week 6 Discussion items. (You may use your own dataset; please don’t use my Sample Post dataset, since that was used in your Week 6 assignment!) For each of the three chosen datasets:
+- Create a .CSV file (or optionally, a MySQL database!) that includes all of the information included in the dataset. You’re encouraged to use a “wide” structure similar to how the information appears in the discussion item, so that you can practice tidying and transformations as described below.
+- Read the information from your .CSV file into R, and use tidyr and dplyr as needed to tidy and transform your data. [Most of your grade will be based on this step!]
+- Perform the analysis requested in the discussion item.
+- Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative descriptions of your data cleanup work, analysis, and conclusions.
+
+## Introduction
+
+I decided to use the following three datasets - The space distribution dataset for commercial real estate that I had provided to the team, the Student Performance data provided by Jered Ataky and the school diversity data provided by Zhouxin Shi.
+
+## Dataset 1 - Space distribution in commercial real estate
+
+This is a typical example of additions and demolitions to stock in commercial real estate that is used to assess fundamentals, too much competitive supply will depress pricing and vice versa. Demolitions can also give a sense of the highest and best use for a parcel of land, too many demolitions and very few additions for a given property-type means that the highest and best use is perhaps an office tower instead of an older warehouse or an apartment building instead of a surface parking lot etc. Furthermore, the information can be aggregated up to determine what share of total stock for a given property-type is functionally obsolete. For example, modern warehouses (Built 2010 and later) have higher ceiling heights and more dock doors for example compared to product built before 1970 with a low dock-door ratio. Such aggregations provide a useful benchmark for investment management and development purposes.
+
+```{r cars}
+library(readr)
+library(RCurl)
+url <- getURLContent("https://raw.githubusercontent.com/tponnada/DATA607/master/Space%20distribution.csv")
+space <- read_csv(url)
+space
+```
+
+## Data cleansing
+
+##Step 1: There is missing data in the first column where Year_Built is not repeated for each row; also an empty row between two rows of data is filled with NA's when read in from the csv file, both of these issues need to be cleaned up.
+
+```{r pressure, echo=FALSE}
+library(tidyr)
+space_clean1 <- na.omit(space %>% fill(Year_Built)); space_clean1
+```
+
+##Step 2: The dataset has three variables - Year_Built, Built Status (Built or Demolished), and building size broken up into a few ranges - (10K - 49K), (50K - 99K), (100K - 199K), (200K - 399K) and 400K+. To tidy it, we need to melt, or stack it. In other words, we need to turn columns into rows. Melting is parameterised by a list of columns that are already variables, or colvars for short. In this example, the colvar is Year_Built. The individual size range columns are melted into one variable called Size_Range. However, this form is not yet tidy because we have two variables stored in rows: "Built" and "Demolished". This needs to be cast.
+
+```{r}
+space_clean2 <- gather(space_clean1, "Size_Range", "Value", 3:7, na.rm = TRUE); space_clean2
+```
+
+##Step 3: Casting the X2 column. Steps 2 and 3 make the data tidy. There is one variable in each column and each row represents an observation. We can use the tidy dataset to perform an initial analysis which is comparing the built and demolished space across size ranges by years. This is best accomplished graphically in the next step.
+
+```{r}
+library(tidyverse)
+options(scipen = 999)
+space_clean3 <- spread(space_clean2, "Status", "Value", convert = TRUE); space_clean3
+```
+
+##Step 4: We visualize by plotting the graphs for total built space versus demolitions and then repeat the exercise for each of the years. Since it's easiest to compare built space next to demolitions, I use the original melted dataset space_clean2 to plot built space and demolitions side by side.
+
+## Conclusions: 
+
+The visualizations below provide a series of observations - Smaller size industrial buildings were in favor before the 1970's compared to big-box warehouse (> 400,000 SF) which gained popularity post-2010. The second observation is as expected which is that we see a high rate of demolitions for industrial stock built before the 70's but limited demolitions for any other time period. As buildings reach the end of their useful life, they are demolished to make way for a higher and better use. Had we combined all built space and demolitions, such granularity and color would have been lost which is best assessed by grouping by the respective time periods.
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+
+#By year - Before 1970
+space_clean4 <- space_clean2 %>% filter(space_clean2$Year_Built == "Before 1970"); space_clean4
+SizeRange <- factor(space_clean4$Size_Range, levels = c("10K-49K", "50K-99K", "100K-199K", "200K-399K", "400K+"))
+ggplot(data = space_clean4, aes(x = SizeRange, y = Value, fill = Status)) + geom_bar(stat = "identity", width = 0.9, position = "dodge") + xlab("Size Range") + ylab("Value in SF") + ggtitle("Before 1970") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+
+#By year - 1970 to 1979
+space_clean5 <- space_clean2 %>% filter(space_clean2$Year_Built == "1970 to 1979"); space_clean5
+SizeRange <- factor(space_clean5$Size_Range, levels = c("10K-49K", "50K-99K", "100K-199K", "200K-399K", "400K+"))
+ggplot(data = space_clean5, aes(x = SizeRange, y = Value, fill = Status)) + geom_bar(stat = "identity", width = 0.9, position = "dodge") + xlab("Size Range") + ylab("Value in SF") + ggtitle("1970 to 1979") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+
+#By year - 1980 to 1989
+space_clean6 <- space_clean2 %>% filter(space_clean2$Year_Built == "1980 to 1989"); space_clean6
+SizeRange <- factor(space_clean6$Size_Range, levels = c("10K-49K", "50K-99K", "100K-199K", "200K-399K", "400K+"))
+ggplot(data = space_clean6, aes(x = SizeRange, y = Value, fill = Status)) + geom_bar(stat = "identity", width = 0.9, position = "dodge") + xlab("Size Range") + ylab("Value in SF") + ggtitle("1980 to 1989") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+
+#By year - 1990 to 1999
+space_clean7 <- space_clean2 %>% filter(space_clean2$Year_Built == "1990 to 1999"); space_clean7
+SizeRange <- factor(space_clean7$Size_Range, levels = c("10K-49K", "50K-99K", "100K-199K", "200K-399K", "400K+"))
+ggplot(data = space_clean7, aes(x = SizeRange, y = Value, fill = Status)) + geom_bar(stat = "identity", width = 0.9, position = "dodge") + xlab("Size Range") + ylab("Value in SF") + ggtitle("1990 to 1999") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+
+#By year - 2000 to 2009
+space_clean8 <- space_clean2 %>% filter(space_clean2$Year_Built == "2000 to 2009"); space_clean8
+SizeRange <- factor(space_clean8$Size_Range, levels = c("10K-49K", "50K-99K", "100K-199K", "200K-399K", "400K+"))
+ggplot(data = space_clean8, aes(x = SizeRange, y = Value, fill = Status)) + geom_bar(stat = "identity", width = 0.9, position = "dodge") + xlab("Size Range") + ylab("Value in SF") + ggtitle("2000 to 2009") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+
+#By year - 2010 to present
+space_clean9 <- space_clean2 %>% filter(space_clean2$Year_Built == "2010 to present"); space_clean9
+SizeRange <- factor(space_clean9$Size_Range, levels = c("10K-49K", "50K-99K", "100K-199K", "200K-399K", "400K+"))
+ggplot(data = space_clean9, aes(x = SizeRange, y = Value, fill = Status)) + geom_bar(stat = "identity", width = 0.9, position = "dodge") + xlab("Size Range") + ylab("Value in SF") + ggtitle("2010 to present") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Dataset 2 - Student Performance
+
+## Purpose - Analyze student performance and parental level of education.
+
+The original dataset already appeared to be in melted format, so I changed it to wide by adding two new columns Female and Male that are actually variable values. When the dataset is read in, any rows without values in these columns is filled with NA's which needs to be taken care of. I also passed variable names such that they are shorter and more meaningful. 
+
+```{r}
+library(readr)
+library(RCurl)
+field_names <- c("Race_Ethnicity", "Parent_education", "Lunch", "Test_Prep", "Math_Score", "Reading_Score", "Writing_Score", "Female", "Male")
+url <- getURLContent("https://raw.githubusercontent.com/tponnada/DATA607/master/Students_Performance.csv")
+performance <- read_csv(url, col_names = field_names, skip = 1, trim_ws = TRUE)
+performance
+```
+
+## Data cleansing
+
+##Step 1: The dataset has eight variables - Race_Ethnicity, Parent_Education, Lunch, Test_Prep, Math_Score, Reading_Score, Writing_Score and Gender (Female and Male). To tidy it, we need to melt, or stack it. The individual Female and Male columns are melted into one variable called Gender, we don't really need the Value column because Gender itself indicates value for each row and I also arranged the columns as in the original dataset by putting Gender first. In addition, I also melt the Math, Reading and Writing Scores into one column called Score so that I can plot Math, Reading and Writing scores side by side for each parent_education grouping.
+
+```{r}
+library(tidyr)
+performance_clean1 <- gather(performance, "Gender", "Value", 8:9, na.rm = TRUE); performance_clean1
+performance_clean2 <- performance_clean1[c("Gender", "Race_Ethnicity", "Parent_education", "Lunch", "Test_Prep", "Math_Score", "Reading_Score", "Writing_Score")]; performance_clean2
+```
+
+##Step 2: We use the tidy dataset above to perform the analysis asked in the assignment which is analyzing student performance for a given level of parental education. This analysis yields interesting insights as below.
+
+## Conclusion: 
+
+It is no surprise that the mean scores across math, reading and writing increase with the level of parental education as more educated parents in turn stress on the importance of education for their children. However, it is surprising that scores across math, reading and writing for parents with some high school education were higher than for those parents who completed their high school education. The other two observations are that the mean Math score ranges were the lowest across parental education categories compared to reading and writing and also that the range of writing scores across parental education categories was the widest.
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+
+#Math/Reading/Writing mean/median/sd breakdowns by parental level of education
+vis_perf1 <- performance_clean2 %>%
+  group_by(Parent_education) %>%
+  summarise(mean_MS = mean(Math_Score), median_MS = median(Math_Score), sd_MS = sd(Math_Score), mean_RS = mean(Reading_Score),  median_RS = median(Reading_Score), sd_rS = sd(Reading_Score), mean_WS = mean(Writing_Score), median_WS = median(Writing_Score), sd_WS = sd(Writing_Score))
+vis_perf1
+
+##Only calculate means and plot to compare
+vis_perf2 <- performance_clean2 %>%
+  group_by(Parent_education) %>%
+  summarise(mean_MS = mean(Math_Score), mean_RS = mean(Reading_Score), mean_WS = mean(Writing_Score))
+vis_perf2
+
+##Order parental level of education from least to most highly educated
+Parentedu <- factor(vis_perf1$Parent_education, levels = c("some high school", "high school", "some college", "associate's degree", "bachelor's degree", "master's degree"))
+
+##Visualize by plotting side-by-side the mean math, reading and writing scores
+ggplot(data = vis_perf2) + geom_bar(mapping = aes(x = Parentedu, y = mean_MS), stat = "identity") + xlab("Parental level of education") + ylab("Mean Math Scores") + ggtitle("Mean Math score by parental level of education") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+ggplot(data = vis_perf2) + geom_bar(mapping = aes(x = Parentedu, y = mean_RS), stat = "identity") + xlab("Parental level of education") + ylab("Mean Reading Scores") + ggtitle("Mean Reading score by parental level of education") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+ggplot(data = vis_perf2) + geom_bar(mapping = aes(x = Parentedu, y = mean_WS), stat = "identity") + xlab("Parental level of education") + ylab("Mean Writing Scores") + ggtitle("Mean Writing score by parental level of education") + theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+## Dataset 3 - School Diversity
+
+## Purpose - Calculate the racial average for each school in each state and write to a csv file.
+
+I used the file that Zhouxin has already uploaded to Github. The file is in wide format with 6 different races in 6 different columns - AIAN (American Indian and Alaska Native), Asian, Black, Hispanic, White and Multi. These need to be melted together. I start by cleaning up the column names so that they are understandable and consistent.
+
+```{r}
+library(readr)
+library(RCurl)
+field_names <- c("RowNum", "LEAID", "LEA_Name", "State", "Locale", "School_Year", "AIAN", "Asian", "Black", "Hispanic", "White", "Multi", "Total", "Diverse", "Variance", "Int_Group")
+url <- getURLContent("https://raw.githubusercontent.com/szx868/data607/master/school_diversity.csv")
+school_diversity <- read_csv(url, col_names = field_names, skip = 1, trim_ws = TRUE)
+school_diversity
+```
+
+## Data cleansing
+
+##Step 1: We filter out all the schools with population less than 100, as indicated in the suggested problem which excludes 2,166 rows. 
+
+```{r}
+school_diversity1 <- school_diversity %>% filter(school_diversity$Total >= 100); school_diversity1
+```
+
+##Step 2: The dataset has eleven variables - RowNum, LEAID, LEA_Name, State, Locale, School_Year, Total, Diverse, Variance, Int_Group and Race with 6 values that need to be stacked - AIAN (American Indian and Alaska Native), Asian, Black, Hispanic, White and Multi. 
+
+```{r}
+library(tidyr)
+school_diversity2 <- gather(school_diversity1, "Race", "Value", 7:12, na.rm = TRUE); school_diversity2
+```
+
+##Step 3: The tidied dataset is used below for some initial analysis. We calculate the racial average by eliminating the White population in the dataset and by grouping by school_year, the proportions should add up to 1 (including the white population). The higher the overall proportion minus the whites, the higher the racial diversity in the school population but this only means that other races were represented. On the other end of the spectrum, the school could be considered less diverse if there is a high majority of only one type of race in the school (Could be Asian, African-American, Hispanic or any other race).
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+
+distinct_df = school_diversity2 %>% distinct(School_Year); distinct_df
+
+school_diversity3 <- school_diversity2 %>%
+  group_by(State) %>%
+  group_by(LEAID) %>%
+  filter(Race != "White" & School_Year == "1994-1995") %>%
+  mutate(Racial_average = sum(Value)); school_diversity3
+
+school_diversity5 <- school_diversity3 %>% filter(Racial_average >= 50); school_diversity5
+
+school_diversity4 <- school_diversity2 %>%
+  group_by(State) %>%
+  group_by(LEAID) %>%
+  filter(Race != "White" & School_Year == "2016-2017") %>%
+  mutate(Racial_average = sum(Value)); school_diversity4
+
+school_diversity6 <- school_diversity4 %>% filter(Racial_average >= 50); school_diversity6
+
+total <- rbind(school_diversity3, school_diversity4); total[order(total$Racial_average, decreasing = TRUE), ]
+```
+
+## Conclusion: 
+
+As we see above, by sorting in descending order we can see that ford heights sd 169 and frazer elem are one of the most undiversified schools because they have a high concentration of American Indian and Black populations. In fact, 6,340 schools or 12% of the schools had such an undiversified student base in the 1994-1995 school year and 13,935 schools or 22% of the schools had such an undiversified student base in the 2016-2017 school year. Hence, the common misconception is incorrect that schools are not racially diverse if they contain a high number of caucasian students, schools can also be considered un-diverse if they have a high concentration of students of any one race including minorities.  
+
+##Step 4: Prepare the output file and write out.
+
+```{r}
+output <- data.frame(total$LEAID, total$LEA_Name, total$State, total$School_Year, round(total$Racial_average))
+write_csv(output, "/Users/tponnada/Desktop/DATA607/Racial_diversity.csv")
+```
+
