@@ -1,0 +1,74 @@
+---
+title: "Assignment 7"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+##The three input files in htm, json and xml formats are uploaded to Github
+https://github.com/tponnada/DATA607/blob/master/convertcsv.htm, 
+https://github.com/tponnada/DATA607/blob/master/convertcsv.json and 
+https://github.com/tponnada/DATA607/blob/master/Rfile-2.xml
+
+alongwith the original csv file - https://raw.githubusercontent.com/tponnada/DATA607/master/Rfile.csv
+
+##The original table is loaded
+
+```{r}
+library(tidyverse)
+library(RCurl)
+library(XML)
+library(rjson)
+library(jsonlite)
+library(DT)
+library(plyr)
+library(methods)
+original <- read.csv("https://raw.githubusercontent.com/tponnada/DATA607/master/Rfile.csv", stringsAsFactors = FALSE)
+datatable(original)
+```
+
+
+##Read data in first using an html link and create a corresponding data frame. I created the html file, uploaded files to Github and consequently downloaded them to local computer from where they are read.
+
+```{r html}
+htmlparsed <- htmlParse(file = "/Users/tponnada/Desktop/DATA607/Rfile.htm")
+html_table <- readHTMLTable(htmlparsed, stringsAsFactors = FALSE)
+html_table <- html_table[[1]]
+html_books <- as.data.frame(html_table); html_books
+```
+
+##Read data in using an xml file and create a corresponding data frame.
+
+```{r xml, echo=FALSE}
+xml_parsed <- xmlParse(file = "/Users/tponnada/Downloads/Rfile-2.xml")
+xml_books <- xmlToDataFrame(xml_parsed)
+datatable(xml_books)
+```
+
+##Read data in using an JSON file and create a corresponding data frame.
+
+```{r}
+json_url <- "/Users/tponnada/Downloads/convertcsv.json"
+json <- fromJSON(json_url); json
+json_books <- as.data.frame(json); json_books
+```
+
+## Conclusion
+View and compare the three separate data frames. The three observations are not equal. The json format is equal to the original csv file, the html file has a blank row and some additional spaces and the xml parse gives a lump of content.
+
+```{r}
+View(html_books)
+View(xml_books)
+View(json_books)
+str(html_books)
+str(xml_books)
+str(json_books)
+all.equal(original, html_books)
+all.equal(original, json_books)
+all.equal(original, xml_books)
+```
+
