@@ -1,0 +1,558 @@
+---
+title: "Project3 – United States 2020 Presidential Election"
+author: "Diego Correa, TJ Parker, and Karim Hammoud"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    highlight: pygments
+    theme: cerulean
+    toc: yes
+    toc_float: yes
+  pdf_document: default
+  openintro::lab_report: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(eval = TRUE, results = TRUE, fig.show = "show", message = TRUE)
+```
+
+## **607 - Term Data Acquisition and Management DATA**
+
+**Project 3**
+
+Create a short document, with the names of group members. 
+
+You should briefly describe your collaboration tool(s) you’ll use as a group, including for communication, code sharing, and project documentation.
+
+You should have identified your data sources, where the data can be found, and how to load it. 
+
+And you should have created at least a logical model for your normalized database, and produced an Entity-Relationship (ER) diagram documenting your database design. 
+
+This is a project for all the members of an assigned group to work on together, since being able to work effectively on a virtual team is a key “soft skill” for data scientists. 
+
+Use data to answer the question, **“Which are the most valued data science skills?”**
+
+Please note especially the requirement about making a presentation during the class meetup on the following Wednesday.
+
+## Introduction
+
+![Picture sourse - Financial Times](https://raw.githubusercontent.com/akarimhammoud/607-Project-3/master/BvsT.png)
+
+**United States 2020 Presidential Election** 
+
+We met via slack almost the second week after the class started and decided to work on project 3 for 607. We decided to create a program to analyze the 2020 presidential election, by using fivethirtyeight data to forecast the probability of winning this election.
+
+**Communication tools:**
+We have been meeting once a week to check on our progress for this project. We collaborated with each other using multiple tools like we created a group chat of slack and we use google meets for video meeting and communication.
+
+**Storing the data:**
+We store the data tables in MySql server using Google Cloud and we shared the data with each other using our private ip addresses. We use Github to store and collaborate on the codes and we created a special repository for all of us to add and collaborate with. And we use OneDrive as well to share documents between each other and store codes and presentations. 
+
+You can find the file and the project in our Github repository here
+https://github.com/akarimhammoud/607-Project-3
+
+
+**The data source** we decided to use is [https://data.fivethirtyeight.com](https://data.fivethirtyeight.com) and we specifically chose the topic of the 2020 election forecasts as it is of topical interest not only to our group but also to the broader team. Per fivethirtyeight’s analysis, Joe Biden is forecast to win the election outlined in [this article.](https://projects.fivethirtyeight.com/2020-election-forecast/)
+
+There are five csv files that we plan to read into our SQL database. These files are uploaded to Github with links below-
+
+[economic_index](https://raw.githubusercontent.com/akarimhammoud/607-Project-3/master/Polling%20Datasets/economic_index.csv)
+
+[presidential_probabilities2020](https://raw.githubusercontent.com/akarimhammoud/607-Project-3/master/Polling%20Datasets/presidential_ev_probabilities_2020.csv)
+
+[presidential_national_toplines_2020](https://raw.githubusercontent.com/akarimhammoud/607-Project-3/master/Polling%20Datasets/presidential_national_toplines_2020.csv)
+
+[presidential_scenario_analysis_2020](https://raw.githubusercontent.com/akarimhammoud/607-Project-3/master/Polling%20Datasets/presidential_scenario_analysis_2020.csv)
+
+[presidential_state_toplines_2020](https://raw.githubusercontent.com/akarimhammoud/607-Project-3/master/Polling%20Datasets/presidential_state_toplines_2020.csv)
+
+## Description
+The description of the tables and primary keys are identified below - 
+
+**The presidential_ev_probabilities table** contains the forecasted chances of every possible Electoral College outcome. The unique identifier in this table is total_ev with modeldate, candidate_inc and candidate_chal as the foreign key. (This table is updated daily, so there is only one modeldate present.)
+
+**The presidential_scenario_analysis table** contains the forecasted chances of various possible election outcome scenarios. The unique identifier for this table is the scenario_id and modeldate with foreign keys - candidate_inc and candidate_chal.
+
+**The economic_index table** contains economic indicators that serve as inputs to the forecast. The unique identifers in this table are modeldate and indicator. The foreign keys are candidate_inc and candidate_chal. 
+For more information on these indicators, see this [post](https://fivethirtyeight.com/features/measuring-the-effect-of-the-economy-on-elections/). The economic indexes were collected from the [Federal Reserve Bank Of St. Louis](https://fred.stlouisfed.org/series/DSPIC96) and the stock prices data from [Yahoo Finance](https://finance.yahoo.com/). This sheet contains the following additional columns:
+
+**The presidential_national_toplines table** contains the final national topline on each day. The modeldate is the unique identifier for the presidential_national_toplines alongwith the popwin_inc and popwin_chal columns. These are the probabilities that the incumbent and the challenger will win the popular vote, respectively. These were chosen as unique identifiers because the sum of probabilities is 1 on any given day. In addition, candidate_inc and candidate_chal were selected as foreign keys referenced from the national_topline table.
+
+**The presidential_state_toplines** contains the final state-level toplines on each day. The modeldate is the unique identifier for the presidential_national_toplines alongwith the winstate_inc and winstate_chal columns. These are the probabilities that the incumbent and the challenger will win the state, respectively. These were chosen as unique identifiers because the sum of probabilities is 1 on any given day. In addition, candidate_inc and candidate_chal were selected as foreign keys referenced from the national_topline table.
+
+## Entity-Relationship Diagram between the different data sets
+
+![](https://raw.githubusercontent.com/akarimhammoud/607-Project-3/master/Database_model.png)
+Below is the feature description for the tables [please check the features]("https://raw.githubusercontent.com/akarimhammoud/607-Project-3/master/feature%20description.csv")
+
+## Analysis - Introduction
+
+**Which are the most valued data science skills?**
+
+The answer is a mix of soft and hard/technical skills are most valued(Soft skills: Communication is very important as highlighted in both the R for data science text book and the Data science for business text.) Other soft skills would be interpersonal skills, collaboration (current collaboration on this project). Technical skills would be programming, data analysis, data visualization etc. 
+
+Having a broad understanding of the big picture and ultimately the objective of any analysis or question behind a data science project is a critical skill as data science doesn’t operate in a vacuum and is used to ultimately support improved decision-making within a business domain. Also, having the big picture helps break down business problems into sub-tasks to which data science algorithms can be applied.
+
+We tackle the question above through several approaches - performing exploratory analysis to answer the specific question – Which economic indicator is the most relevant to election forecasts (S&P 500, PCE, Industrial Production, Nonfarm payrolls, CPI, Real disposable personal income)? (Correlation analysis, other metrics etc.?) We could make the question more precise as required in data science so that a specific data mining solution can be applied to answer the business problem. The topical question of interest for example is why there is a disconnect between the economy and the stock market. We could extend that to is the stock market performance a meaningful indicator of incumbent or challenger performance in the polls? This would be an example of a targeted question and we could use supervised segmentation methods such as classification or class probability estimation techniques to answer this? 
+
+We also want to spend some portion of our energy and resources on exploring the data as competent data scientists to see what else the data can tell us. This would be unsupervised segmentation, so for example look at the state topline table and look at which states form natural groupings – Look at winstate_inc and winstate_chal for example, are there any natural groupings that exist for incumbent states and challenger states? 
+After analyzing both questions, we will visualize the data using plots and stats analysis tools and provide a firm conclusion. 
+
+
+```{r include=FALSE}
+# Tidyverse to load ggplot and tidyr to manipulate and visualize data frames
+library(tidyverse)
+# lubridate to clean up the date columns
+library(lubridate)
+#  RMySQL to load CSV files into MySQL
+library(RMySQL)
+# for visualization of the US
+library(usmap)
+# reshape to manipulate dataframe in order to find covariances
+library(reshape2)
+
+library(ggpubr)
+```
+
+
+## Loading data
+
+```{r}
+#Presidential National Toplines
+url1 <- 'https://projects.fivethirtyeight.com/2020-general-data/presidential_national_toplines_2020.csv'
+#Presidential State Toplines
+url2 <- 'https://projects.fivethirtyeight.com/2020-general-data/presidential_state_toplines_2020.csv'
+#Presidential EV Probabilities
+url3 <- 'https://projects.fivethirtyeight.com/2020-general-data/presidential_ev_probabilities_2020.csv'
+#Presidential Scenario Analysis
+url4 <- 'https://projects.fivethirtyeight.com/2020-general-data/presidential_scenario_analysis_2020.csv'
+#Economic Index
+url5 <- 'https://projects.fivethirtyeight.com/2020-general-data/economic_index.csv'
+
+#Saving data into variables
+dfPNT <- read.csv(file = url1)
+dfPST <- read.csv(file = url2)
+dfPEP <- read.csv(file = url3)
+dfPSA <- read.csv(file = url4)
+dfEI <- read.csv(file = url5)
+```
+
+```{r}
+# we notice that the dates in modelcate and timestamp are stored a different format
+# than we want to store them for later anaylsis
+str(dfEI)
+
+```
+
+## Observing & Cleaning 
+
+When we look at the dataframes, we see the the modeldate and the timestamp fields are stored as character types. Additionally, the timestamp field contains multplie whitespaces. Before dumping the data into the MySQL database, we need to clean up the fields.
+As the same process needs to be done to each data frame, a function was created to 
+address preform the necessary cleansing mentioned above. We do this with the help of
+the lubridate package.
+
+
+```{r}
+# creating function to go into the modeldate and timestamp columns of each csv and converting
+# into a format we can perform analysis on
+datetime.this <- function(df){
+  
+  #using the mdy function of lubridate to format the modeldate column
+  
+  df$modeldate <- mdy(df$modeldate)
+  
+  #now we need to change the format of the timestamp column
+  #using str_replace_all of tidyr, finding 2 whitespaces and replacing with a single one
+  df$timestamp <- str_replace_all(df$timestamp, ' {2}', ' ')
+  
+  #splitting the column into a new data frame where there is a ":" or " "
+  x <- data.frame(str_split(df$timestamp, ':| ', n = 4, simplify = TRUE))
+  
+  #creating a date column by using the dmy function from lubridate
+  x <- x %>%
+    mutate(date = dmy(X4))
+  
+  #creating the timestamp column
+  x <- x %>%
+    mutate(timestamp = as_datetime(paste(date, as.integer(X1), as.integer(X2), as.integer(X3),
+                                         sep = ' ')))
+  #last step, saving the creating column in the data frame that is passed
+  df$timestamp <- x$timestamp
+  
+  return(df)
+}
+
+
+dfEI <- datetime.this(dfEI)
+dfPST <- datetime.this(dfPST)
+dfPNT <- datetime.this(dfPNT)
+dfPEP <- datetime.this(dfPEP)
+dfPSA <- datetime.this(dfPSA)
+
+str(dfEI)
+
+```
+
+## Connecting and storing to db
+
+```{r message=FALSE, include=FALSE}
+#storing the data in google cloud database
+con <- dbConnect(MySQL(),
+                 user = 'root',
+                 host = '35.225.135.85',
+                 dbname = 'DATA607')
+
+dbWriteTable(con, 'Presidential_National_Toplines', dfPNT, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(con, 'Presidential_State_Toplines', dfPST, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(con, 'Presidential_EV_Probabilities', dfPEP, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(con, 'Presidential_Scenario_Analysis', dfPSA, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(con, 'Economic_Index', dfEI, row.names = FALSE, overwrite = TRUE)
+```
+
+### Economic Index
+The Economic Index table contains economic indicators that serve as inputs to the forecast. 
+For more information on these indicators, see this [post](https://fivethirtyeight.com/features/measuring-the-effect-of-the-economy-on-elections/). The economic indexes were collected from the [Federal Reserve Bank Of St. Louis](https://fred.stlouisfed.org/series/DSPIC96) and the stock prices data from [Yahoo Finance](https://finance.yahoo.com/). This sheet contains the following additional columns:
+
+
+```{r}
+#getting the Economic_Index table from MySQL
+res_EI <- dbGetQuery(con, 'select modeldate, category, current_zscore, projected_zscore
+                  from Economic_Index;')
+
+#modeldate column is save as a character, we need to change the modeldate column in date
+res_EI$modeldate <- ymd(res_EI$modeldate)
+
+#graphing the categories in the Economic Index table with a linear regression(geom_smooth)
+current <- ggplot(data = res_EI) + 
+  geom_smooth(mapping = aes(x = modeldate, y = current_zscore), color = 'brown') +
+  geom_smooth(mapping = aes(x = modeldate, y = projected_zscore), color = 'green') +
+  facet_wrap(~category) +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1))
+current + scale_x_date(date_labels = '%m-%Y') +
+  labs(title = 'Current & Projected Zscore of Economic Index by Model Date') 
+```
+
+## Presidential EV Probabilities table
+
+The Presidential EV Porbabilities table contains the forecasted chances of every possible Electoral College outcome. This table contains only one most recent day's electoral college simulations.
+
+```{r}
+str(dfPEP)
+```
+
+## Presidential Scenario Analysis
+
+The Presidential Scenario Analysis contains the forecasted chances of various possible election outcome scenarios.
+
+
+```{r}
+str(dfPSA)
+```
+```{r}
+res <- dbGetQuery(con, 'select modeldate, scenario_description, probability from 
+                  Presidential_Scenario_Analysis;')
+
+res$modeldate <- ymd(res$modeldate)
+
+probScenario <- ggplot(data = res) +
+  geom_line(mapping = aes(modeldate, y = probability, color = scenario_description)) +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1))
+
+probScenario 
+#not very pretty to look at
+```
+## State Toplines
+
+Looking at red and blue states
+
+```{r}
+# grabbing the average probability of the incumbent winning the state
+res <- dbGetQuery(con, 'select state, avg(winstate_inc) Inc from Presidential_State_Toplines group by state;')
+
+dfStateWin <- res
+
+
+plot_usmap(data = dfStateWin, values = 'Inc') + 
+  scale_fill_gradient2(
+    low = 'blue', high = 'red', mid = 'white', midpoint = .5, limit = c(0,1),
+    name = 'Projected Vote Outcomes'
+  ) + theme(legend.position = 'right') +
+  labs(title = 'Projected Red and Blue States')
+```
+
+#### Voter Turnout by State
+
+separating red and blue states based on average probability of winning state
+
+```{r warning=FALSE}
+# grabbing the entire presidential state toplines table
+res_state <- dbGetQuery(con, 'select * from Presidential_State_Toplines;')
+
+# getting the average probability of the incumbent winning the state
+# then filtering and those states that are equal to or greater than 0.50
+red_states <- res_state %>%
+  group_by(state) %>%
+  summarize(avg_winstate_inc = round(mean(winstate_inc, na.rm = TRUE), 3)) %>%
+  filter(avg_winstate_inc >= 0.5) %>%
+  select(state)
+
+# once I have the red states, I can go back into the original data frame and grab the 
+# average projected turnout of those states
+red_state_turnout <- res_state %>%
+  semi_join(red_states) %>%
+  group_by(state) %>%
+  summarize(avg_state_turnout = mean(state_turnout, na.rm = TRUE))
+
+# since I have the red states, I can use the anti_join function and grab the average
+# turnout of the states that are not red (blue).
+blue_state_turnout <- res_state %>%
+  anti_join(red_states) %>%
+  group_by(state) %>%
+  summarize(avg_state_turnout = mean(state_turnout, na.rm = TRUE))
+
+# I add a column in the red & blue state data frame with the value "red" & "blue"
+red_state_turnout['state_color'] <- 'red'
+blue_state_turnout['state_color'] <- 'blue'
+
+# combine the data frames
+df1 <- rbind(red_state_turnout, blue_state_turnout)
+
+# boxplot of the red and blue states' turnout
+bp <- ggplot(data = df1, aes(x = state_color, y = avg_state_turnout, fill = state_color)) +
+  geom_boxplot() +
+  labs(title = 'Projected Turnout of Red & Blue States', subtitle = 'Boxplot')
+bp + scale_fill_manual(values = c('blue', 'red'))
+
+# density chart
+den <- ggplot(data = df1, aes(x = avg_state_turnout, fill = state_color)) +
+  geom_density(alpha = 0.4)
+den + scale_fill_manual(values = c('blue', 'red')) +
+  labs(title = 'Projected Turnout of Red & Blue States', subtitle = 'Density')
+```
+## States with the Most Influence
+
+To find the answer to this, I added two columns found in the Presidential_State_Toplines table,
+"win_EC_if_win_state_inc" & "win_EC_if_win_state_chal".
+
+```{r}
+# creating a column that is the sum of the two columns, group them, find the average, and order them
+states_influence <- res_state %>%
+  mutate(total_EC_influence = win_EC_if_win_state_inc + win_EC_if_win_state_chal) %>% 
+  group_by(state) %>%
+  summarize(avg_EC_Influence = mean(total_EC_influence, na.rm = TRUE)) %>%
+  arrange(desc(avg_EC_Influence))
+
+# plotting on a map
+plot_usmap(data = states_influence, values = 'avg_EC_Influence') + 
+  scale_fill_continuous(
+    low = 'white', high = 'purple', name = 'Wins EC if Wins State Prob'
+  ) + theme(legend.position = 'right') +
+  labs(title = 'Wins EC if Wins State Prob')
+
+# looking at the dataframe
+head(states_influence)
+
+
+```
+
+### Trump projections per state
+
+```{r warning = FALSE}
+#projection table with the percentage of winning across all states
+plot_a <- ggplot(dfPST, aes(x=reorder(state,desc(winstate_inc)), y=winstate_inc, fill = winstate_inc))+
+  geom_bar(stat = 'identity')+
+  xlab('State')+ylab('Projections')+
+  theme(axis.text.x = element_text(angle=90, hjust=1, size=6))+
+  scale_fill_gradient(low = 'white', high = 'red', name='Projections')
+
+# plot the US map for per state with percentage of projection winning
+plot_b <- plot_usmap(data=dfPST, values= 'winstate_inc', color= 'gray')+
+  scale_fill_gradient(low = 'white', high = 'red', name='Projections')+
+  ggtitle('Trump Projections to Win in each State')+
+  theme(legend.position = 'right')
+
+#scale
+ggarrange(plot_b,plot_a, nrow =2)
+```
+
+### Biden projections per state
+
+```{r warning = FALSE}
+#projection table with the percentage of winning across all states
+plot_c <- ggplot(dfPST, aes(x=reorder(state,desc(winstate_chal)), y=winstate_chal, fill = winstate_chal))+
+  geom_bar(stat = 'identity')+
+  xlab('State')+ylab('Projections')+
+  theme(axis.text.x = element_text(angle=90, hjust=1, size=6))+
+  scale_fill_gradient(low = 'white', high = 'Blue', name='Projections')
+
+# plot the US map for per state with percentage of projection winning
+plot_d <- plot_usmap(data=dfPST, values= 'winstate_chal', color= 'gray')+
+  scale_fill_gradient(low = 'white', high = 'Blue', name='Projections')+
+  ggtitle('Biden Projections to Win in each State')+
+  theme(legend.position = 'right')
+
+#scale
+ggarrange(plot_d, plot_c, nrow =2)
+```
+
+
+## Economic Index & Presidential National Toplines
+
+Looking at the economic index and the probabilities of winning the presidency
+
+```{r}
+# joining the tables on the modeldate
+res_Nat_EI <- dbGetQuery(con, 'select p.modeldate, ecwin_inc, ecwin_chal, 
+                            category, indicator, projected_zscore, current_zscore
+                             from 
+                             Presidential_National_Toplines p 
+                             inner join  Economic_Index ei
+                                  on ei.modeldate = p.modeldate;')
+
+# plotting the relationship of the EI's and the prob of the incumbent winning
+ggplot(data = res_Nat_EI, aes(x = ecwin_inc, y = current_zscore, color = 'red')) +
+  geom_smooth() + 
+  facet_wrap(~ indicator) +
+  theme(legend.position =  'none', axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(title = 'Probability of Incumbent Winning vs Current Zscore of Economic Index')
+
+# plotting the relationship of the EI's and the prob of the challenger winning
+ggplot(data = res_Nat_EI, aes(x = ecwin_chal, y = current_zscore)) +
+  geom_smooth(aes(fill = 'blue')) + 
+  facet_wrap(~ category) +
+  theme(legend.position =  'none', axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(title = 'Probability of Challenger Winning vs Current Zscore of Economic Index')
+
+# we see that income is positively correlated with the incumbent winning and 
+# spending positively correlated with the challenger winning
+```
+
+## Covariances of variables in the Presidential National Toplines
+
+
+
+```{r}
+# grabbing entire presidential national toplines, has 40 columns
+res_nat <- dbGetQuery(con, 'select * from Presidential_National_Toplines;')
+
+# filter out the columns that we need, only the columns ending "chal" and "inc"
+# first finding the column names with "chal" for challenger
+col  <- colnames(res_nat)
+chal_col <- str_match(col, '.*chal$')
+chal_col <- chal_col[!is.na(chal_col)]
+
+# saving the "chal" columns in a data frame
+dfChal <- res_nat[, chal_col[2:length(chal_col)]]
+
+# finding the correlations
+chal_cormatrix <- round(cor(dfChal), 2)
+
+# finding the column names with "inc" for incumbent
+inc_col <- str_match(col, '.*inc$')
+inc_col <- inc_col[!is.na(inc_col)]
+
+# saving the "inc" columns in a data frame
+dfInc <- res_nat[, inc_col[2:length(inc_col)]]
+
+# finding the correlations
+inc_cormatrix <- round(cor(dfInc), 2)
+
+
+# function to remove the bottom right triangle of matrix as it is redundant
+get_upper_tri <- function(cormatrix){
+  cormatrix[lower.tri(cormatrix)] <- NA
+  return(cormatrix)
+}
+
+# function to reorder the matrix from hi to low covariance
+reorder_cormatrix <- function(cormatrix){
+  dd <- as.dist((1 - cormatrix) / 2)
+  hc <- hclust(dd)
+  cormatrix <- cormatrix[hc$order, hc$order]
+}
+
+# running the data frames through the functions
+chal_cormatrix <- reorder_cormatrix(chal_cormatrix)
+chal_upper_triangle <- get_upper_tri(chal_cormatrix)
+inc_cormatrix <- reorder_cormatrix(inc_cormatrix)
+inc_upper_triangle <- get_upper_tri(inc_cormatrix)
+
+# the melt function from reshape2 library reshapes the matrix for it to be plotted
+chal_melted_cormatrix <- melt(chal_upper_triangle, na.rm = TRUE)
+inc_melted_cormatrix <- melt(inc_upper_triangle, na.rm = TRUE)
+
+# plotting the challenger variables
+ggplot(data = chal_melted_cormatrix, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = 'white') +
+  scale_fill_gradient2(low = 'white', high = 'blue', 
+                       midpoint = 0.5, limit = c(0,1), space = 'Lab') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  coord_fixed() +
+  labs(title = 'Covariance of Challenger Measures')
+
+# plotting the incumbent variables
+ggplot(data = inc_melted_cormatrix, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = 'white') +
+  scale_fill_gradient2(low = 'white', high = 'red', 
+                       midpoint = 0.5, limit = c(0,1), space = 'Lab') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  coord_fixed() + 
+  labs(title = 'Covariance of Incumbent Measures')
+
+# As you guessed it, the popwin variable for both the challenger and incumbent has the 
+# lowest covariance
+
+```
+## Presidential National Toplines
+
+contains the final national topline on each day.Chances to win electoral votes (Biden in blue, Trump in red)
+
+
+```{r}
+# grabbing the probabilities of the incumbent and challenger winning the presidency
+res_nat_EC <- dbGetQuery(con, 'select modeldate, ecwin_inc, ecwin_chal from 
+                  Presidential_National_Toplines;')
+
+# changing the modeldate from character to date using lubridate
+res_nat_EC$modeldate <- ymd(res_nat_EC$modeldate)
+
+# graphing the two columns by dates
+probEWin <- ggplot(data = res_nat_EC) +
+  geom_line(mapping = aes(x = modeldate, y = ecwin_inc), color = 'red') +
+  geom_line(mapping = aes(x = modeldate, y = ecwin_chal), color = 'blue') +
+  theme(axis.text.x =  element_text(angle = 70, hjust = 1))
+
+probEWin + scale_x_date(date_labels = '%m-%Y') +
+  labs(title = 'Probability of Incumbent & Challenger Winning Election' , y = 'probability')
+
+
+```
+
+
+
+## Conclusion
+
+**We completed our analysis based on the fivethirtyeight data which includes at least the past 100 days of elections forecasts, based on the analysis and the data, using multiple tables we came to the following conclusions about the projections of the presidential election of 2020:**
+
+**Economic Index: The probability analysis for this index showed when income goes down there is more chance for the challenger “Biden” to win, and the opposite is true for Trump.**
+
+**Presidential State Toplines: After analyzing the states we noticed there are some states that are highly projected Biden will win them and others highly projected Trump will win, but there are some states that could go either side.**
+
+**Presidential Scenario Analysis: There are some states that have more effects than others on this election like Florida, Michigan, Pennsylvania, and others, which will reflect highly on the electoral college during the election.**
+
+**Presidential National Toplines: The percentage of the winning between both candidates vary between 45% - 47% for Trump, and on the other side Biden has between 52% - 53%. Since the beginning of October 2020, we have noticed an increase in Biden percentage of presidential winning while a decrease in Trump percentage.**
+
+**Finally, most of our analysis round the percentage of winning for both candidates about 45% - 47% for Trump, on the other side Biden has between 52% - 53%.**
+
+**Based on the data Joe Biden has a higher chance of winning the 2020 election. for reference please check [this article.](https://projects.fivethirtyeight.com/2020-election-forecast/)**
+
+**Thank you,**
+
+**TJ, Diego, and Karim**
+
+
+
