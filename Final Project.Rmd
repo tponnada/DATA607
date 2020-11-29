@@ -1,0 +1,1059 @@
+---
+title: "Final Project"
+output: html_document
+---
+
+## Introduction
+
+For my final project, as outlined in the discussion forum, I chose to understand better the employment data during the lock downs instituted in March and April and their impact on employment. The analysis is organized into five parts. Part I discusses high-level employment trends during the initial lockdowns and the progress made since, Part II then takes a deep-dive into employment trends by industry - least and worst impacted industries for a select set of industries and how they have fared since, Part III looks at the impact of education level on employment losses. Part IV explores demographic trends by gender and race, i.e. were some minority groups disproportionately impacted by COVID-19 employment losses than others. Since each part is a separate question, I've followed up with conclusions for each section with a thoughtful analysis. Some key takeaways are surmised at the end bringing the conclusions together!
+
+## Motivation for performing the analysis
+
+The motivation behind my analysis is simple, commercial real estate demand across property types is dependent on employment. Office-using employment drives office demand, total employment is often the exogenous driver behind forecasting industrial demand as people are likely to indulge in discretionary purchases and durable goods when they are employed which in turn drives warehouse and distribution space demand to store those goods. Retail sales are likewise linked to employment and consumption patterns and finally apartment demand is strongly linked to employment as well - Young millennials are likely to rent in urban cores and in Sun Belt cities with strong job growth. Married and unmarried professionals typically rent first before they scope out a single-family home for purchase etc. With so much riding on employment, it is interesting to understand the trends behind this macro driver and ultimately extrapolate how it might impact commercial real estate demand in the near-term.
+
+## Step 1: Data acquisition
+
+I chose to use BLS employment data but as provided on the FRED database. The data is generally displayed in chart form on the FRED website and available to download in several formats - Excel, CSV, Image, PowerPoint or PDF. I chose the CSV format as this is one of the acceptable file formats outlined in the final project requirements. Below are the files I've downloaded from FRED and uploaded to the Github site. The selected data series are all seasonally adjusted. monthly data and the sources behind the employment data are BLS' Establishment (Current Employment Statistics) and Household Surveys (Current Population Survey).
+
+```{r}
+# Tidyverse to load ggplot and tidyr to manipulate and visualize data frames
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(gridExtra)
+library(reshape2)
+library(e1071)
+```
+## Loading data source #1 - CSV files.
+
+```{r}
+#Aggregate national-level employment data for total non-farm, goods and services to assess where job losses were severe from the CES (Current Employment Statistics) Establishment Survey
+
+#All Employees, Total Non-farm
+url1 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/PAYEMS.csv'
+#All Employees, Goods-Producing
+url2 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/USGOOD.csv'
+#All Employees, Service-Producing
+url3 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/SRVPRD.csv' 
+
+#Aggregate sector-level employment data to analyze and identify worst and best-performing sectors from the CES (Current Employment Statistics) Establishment Survey
+
+#All Employees, Manufacturing
+url4 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/MANEMP.csv'
+#All Employees, Education and Health Services
+url5 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/USEHS.csv'
+#All Employees, Financial Activities
+url6 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/USFIRE.csv'
+#All Employees, Leisure & Hospitality
+url7 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/USLAH.csv'
+#All Employees, Professional & Business Services
+url8 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/USPBS.csv'
+#All Employees, Retail Trade
+url9 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/USTRADE.csv'
+#All Employees, Oil and Gas Extraction
+url10 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/CES1021100001.csv'
+#All Employees, Air Transportation
+url11 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/CES4348100001.csv'
+#All Employees, Truck Transportation
+url12 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/CES4348400001.csv'
+#All Employees, Warehousing and Storage
+url13 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/CES4349300001.csv'
+#All Employees, Health Care
+url14 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/CES6562000101.csv'
+#Women Employees, Leisure and Hospitality
+url15 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/CES7000000010.csv'
+#All Employees, Food Services and Drinking Places
+url16 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/CES7072200001.csv'
+
+#Employment-levels to identify choice and demographic trends from the Current Population Survey (CPS)
+
+#Employed, Usually Work Full Time
+url17 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12500000.csv'
+#Employed, Usually Work Part Time
+url18 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12600000.csv'
+
+#Employment Level - Part-Time for Economic Reasons, All Industries
+url19 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12032194.csv'
+#Employment Level - Part-Time for Economic Reasons, Non-agricultural Industries 
+url20 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12032197.csv'
+
+#Employment Level - Black or African American 
+url21 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12000006.csv'
+#Employment Level - Hispanic or Latino
+url22 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12000009.csv'
+#Employment Level - White
+url23 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12000003.csv'
+
+#Employment Level - Women 
+url24 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12000002.csv'
+#Employment Level - Men 
+url25 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12000001.csv'
+#Employment Level - Married Women
+url26 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12000315.csv'
+#Employment Level - Married Men
+url27 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12000150.csv'
+
+#Employment Level - Bachelor's Degree and Higher, 25 Yrs. & Over 
+url28 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12027662.csv'
+#Employment Level - Some College or Associate Degree, 25 Yrs. & Over
+url29 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12027689.csv'
+#Employment Level - High School Graduates, No College, 25 Yrs. & Over 
+url30 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12027660.csv'
+#Employment Level - Less Than a High School Diploma, 25 Yrs. & Over
+url31 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12027659.csv'
+
+#Labor Force Flows Unemployed to Employed
+url32 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS17100000.csv'
+#Labor Force Flows Employed to Unemployed
+url33 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS17400000.csv'
+
+#Employment-to-population ratios by totals and by age and gender cohorts from the current population survey (Household Survey)
+
+#Employment-Population Ratio - Men
+url34 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12300001.csv'
+#Employment-Population Ratio - Women
+url35 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LNS12300002.csv'
+
+#Employment Rate: Aged 25-54: All Persons for the United States
+url36 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LREM25TTUSM156S.csv'
+#Employment Rate: Aged 25-54: Females for the United State
+url37 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LREM25FEUSM156S.csv'
+#Employment Rate: Aged 25-54: Males for the United States
+url38 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LREM25MAUSM156S.csv'
+
+#Employment Rate: Aged 55-64: All Persons for the United States
+url39 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LREM55TTUSM156S.csv'
+#Employment Rate: Aged 55-64: Females for the United States
+url40 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LREM55FEUSM156S.csv'
+#Employment Rate: Aged 55-64: Males for the United States
+url41 <- 'https://raw.githubusercontent.com/tponnada/DATA607/master/LREM55MAUSM156S.csv'
+
+#Reading data into dataframes
+dfempnfarm <- read.csv(file = url1)
+dfusgoods <- read.csv(file = url2)
+dfsrvprd <- read.csv(file = url3)
+dfmanemp <- read.csv(file = url4)
+dfusehs <- read.csv(file = url5)
+dfusfire <- read.csv(file = url6)
+dfuslah <- read.csv(file = url7)
+dfuspbs <- read.csv(file = url8)
+dfustrade <- read.csv(file = url9)
+dfusong <- read.csv(file = url10)
+dfairtran <- read.csv(file = url11)
+dftrucktran <- read.csv(file = url12)
+dfuswhs <- read.csv(file = url13)
+dfushcare <- read.csv(file = url14)
+dfusfemlah <- read.csv(file = url15)
+dffandb <- read.csv(file = url16)
+dffullt <- read.csv(file = url17)
+dfpartt <- read.csv(file = url18)
+dfparttecal <- read.csv(file = url19)
+dfparttecna <- read.csv(file = url20)
+dfblack <- read.csv(file = url21)
+dfhis <- read.csv(file = url22)
+dfwhite <- read.csv(file = url23)
+dfempw <- read.csv(file = url24)
+dfempm <- read.csv(file = url25)
+dfmempw <- read.csv(file = url26)
+dfmempm <- read.csv(file = url27)
+dfbach <- read.csv(file = url28)
+dfcoll <- read.csv(file = url29)
+dfhigh <- read.csv(file = url30)
+dfnhigh <- read.csv(file = url31)
+dfunemp2emp <- read.csv(file = url32)
+dfemp2unemp <- read.csv(file = url33)
+dfemp2popm <- read.csv(file = url34)
+dfemp2popfem <- read.csv(file = url35)
+df25254all <- read.csv(file = url36)
+df25254fem <- read.csv(file = url37)
+df25254men <- read.csv(file = url38)
+df55264all <- read.csv(file = url39)
+df55264fem <- read.csv(file = url40)
+df55264men <- read.csv(file = url41)
+
+```
+
+
+## Step 2: Data cleansing & Transformation
+
+The data tends to be pretty clean as put out by FRED. I checked the first few sets of files and there were no missing data or NA's in the columns. Also, each file corresponds to only one employment varirable - e.g. Total employment or total employment-to-population ratio for women etc. But I did rename columns where necessary to make them more understandable.
+
+```{r}
+#Rename non-farm employment column
+dfempnfarm <- rename(dfempnfarm, EMPNFARM = "PAYEMS"); head(dfempnfarm)
+#Rename Oil & Gas employment column
+dfusong <- rename(dfusong, USONG = "CES1021100001"); head(dfusong)
+#Rename Air Transportation employment column
+dfairtran <- rename(dfairtran, AIRTRAN = "CES4348100001"); head(dfairtran)
+#Rename Truck Transportation employment column
+dftrucktran <- rename(dftrucktran, TRUCKTRAN = "CES4348400001"); head(dftrucktran)
+#Rename Warehouse employment column
+dfuswhs <- rename(dfuswhs, USWHS = "CES4349300001"); head(dfuswhs)
+#Rename US healthcare employment column
+dfushcare <- rename(dfushcare, USHCARE = "CES6562000101"); head(dfushcare)
+#Rename female employment in Leisure & Hospitality employment column
+dfusfemlah <- rename(dfusfemlah, USFEMLAH = "CES7000000010"); head(dfusfemlah)
+#Rename Food & Beverage employment column
+dffandb <- rename(dffandb, USFANDB = "CES7072200001"); head(dffandb)
+#Rename Full-time employment column
+dffullt <- rename(dffullt, USFULLT = "LNS12500000"); head(dffullt)
+#Rename Part-time employment column
+dfpartt <- rename(dfpartt, USPARTT = "LNS12600000"); head(dfpartt)
+#Rename Part-time for economic reasons - all industries employment column
+dfparttecal <- rename(dfparttecal, USPARTTECAL = "LNS12032194"); head(dfparttecal)
+#Rename Part-time for economic reasons - Non-agriculture industries employment column
+dfparttecna <- rename(dfparttecna, USPARTTECNA = "LNS12032197"); head(dfparttecna)
+#Rename Black employment column
+dfblack <- rename(dfblack, USBLACK = "LNS12000006"); head(dfblack)
+#Rename Hispanic employment column
+dfhis <- rename(dfhis, USHIS = "LNS12000009"); head(dfhis)
+#Rename White employment column
+dfwhite <- rename(dfwhite, USWHITE = "LNS12000003"); head(dfwhite)
+#Rename Female employment column
+dfempw <- rename(dfempw, USEMPW = "LNS12000002"); head(dfempw)
+#Rename Male employment column
+dfempm <- rename(dfempm, USEMPM = "LNS12000001"); head(dfempm)
+#Rename Married Women employment column
+dfmempw <- rename(dfmempw, USMEMPW = "LNS12000315"); head(dfmempw)
+#Rename Married Men employment column
+dfmempm <- rename(dfmempm, USMEMPM = "LNS12000150"); head(dfmempm)
+#Rename Bachelor's degree employment column
+dfbach <- rename(dfbach, USBACH = "LNS12027662"); head(dfbach)
+#Rename Some college employment column
+dfcoll <- rename(dfcoll, USCOLL = "LNS12027689"); head(dfcoll)
+#Rename only high school employment column
+dfhigh <- rename(dfhigh, USHIGH = "LNS12027660"); head(dfhigh)
+#Rename No high school employment column
+dfnhigh <- rename(dfnhigh, USNHIGH = "LNS12027659"); head(dfnhigh)
+#Rename Unemployed to Employed employment column
+dfunemp2emp <- rename(dfunemp2emp, USUNEMP2EMP = "LNS17100000"); head(dfunemp2emp)
+#Rename Employed to Unemployed employment column
+dfemp2unemp <- rename(dfemp2unemp, USEMP2UNEMP = "LNS17400000"); head(dfemp2unemp)
+#Rename Employment-to-population ratio Male employment column
+dfemp2popm <- rename(dfemp2popm, USEMP2POPM = "LNS12300001"); head(dfemp2popm)
+#Rename Employment-to-population ratio Female column
+dfemp2popfem <- rename(dfemp2popfem, USEMP2POPFEM = "LNS12300002"); head(dfemp2popfem)
+#Rename the demographic cohorts
+df25254all <- rename(df25254all, US25254ALL = "LREM25TTUSM156S"); head(df25254all)
+df25254fem <- rename(df25254fem, US25254FEM = "LREM25FEUSM156S"); head(df25254fem)
+df25254men <- rename(df25254men, US25254MEN = "LREM25MAUSM156S"); head(df25254men)
+df55264all <- rename(df55264all, US55264ALL = "LREM55TTUSM156S"); head(df55264all)
+df55264fem <- rename(df55264fem, US55264FEM = "LREM55FEUSM156S"); head(df55264fem)
+df55264men <- rename(df55264men, US55264MEN = "LREM55MAUSM156S"); head(df55264men)
+
+```
+
+## Part I: Analyzing high-level employment trends
+
+First I'll start by analyzing the impact of the pandemic on total non-farm employment and on its constituents - Goods and Services jobs. To do this, we need to first take the difference of the rows in the total employment column which is cumulative employment and then add the job losses for March-April and the job gains since May. I realized when I started working with the files that the date imported in the csv file formats is in factor form and needs to be changed to DATE format using the lubridate package.
+
+```{r}
+##Include one statistical analysis and at least one graphic that describes or validates the data
+##Here I check if each of the input data series is a normal distribution by checking the histogram, the Q-Q plot and the Shapiro test which is a widely used test of normality
+
+par(mfrow=c(3,2))
+
+hist(dfempnfarm$EMPNFARM, 100, col="black")
+qqnorm(dfempnfarm$EMPNFARM); qqline(dfempnfarm$EMPNFARM, col = 2)
+shapiro.test(dfempnfarm$EMPNFARM)
+kurtosis(dfempnfarm$EMPNFARM)
+skewness(dfempnfarm$EMPNFARM)
+
+hist(dfusgoods$USGOOD, 100, col="black")
+qqnorm(dfusgoods$USGOOD); qqline(dfusgoods$USGOOD, col = 2)
+shapiro.test(dfusgoods$USGOOD)
+kurtosis(dfusgoods$USGOOD)
+skewness(dfusgoods$USGOOD)
+
+hist(dfsrvprd$SRVPRD, 100, col="black")
+qqnorm(dfsrvprd$SRVPRD); qqline(dfsrvprd$SRVPRD, col = 2)
+shapiro.test(dfsrvprd$SRVPRD)
+kurtosis(dfsrvprd$SRVPRD)
+skewness(dfsrvprd$SRVPRD)
+
+#Calculate the difference in non-farm employment
+dfempnfarm$change <- with(dfempnfarm, c(NA, diff(EMPNFARM))); head(dfempnfarm)
+#Calculate the difference in goods employment
+dfusgoods$change <- with(dfusgoods, c(NA, diff(USGOOD))); head(dfusgoods)
+#Calculate the difference in services employment
+dfsrvprd$change <- with(dfsrvprd, c(NA, diff(SRVPRD))); head(dfsrvprd)
+#Create a new data frame with the three difference columns calculate above
+total <- data.frame(dfempnfarm, dfusgoods, dfsrvprd)
+#All the difference columns are named change, so rename to more discernible column names
+total2 <- rename(total, EMPNFARMCHG = "change", USGOODCHG = "change.1", SRVPRDCHG = "change.2")
+#Use lubridate to change the class of the date variable from factor to DATE
+total3 <- data.frame(mdy(total2$DATE), total2$EMPNFARMCHG, total2$USGOODCHG, total2$SRVPRDCHG)
+#Rename the converted DATE column
+total3 <- rename(total3, DATE = "mdy.total2.DATE.")
+
+#Retain only total non-farm employment gains/losses for plotting
+total4 <- total3[c(-3, -4)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize1 <- total4 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total2.EMPNFARMCHG));visualize1 
+visualize2 <- total4 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total2.EMPNFARMCHG)); visualize2
+#Calculate percentage of job gains in the recovery
+visualize3 <- (visualize2 / visualize1) *100; visualize3
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot1 <- ggplot(data = total4, aes(x = DATE, y = total2.EMPNFARMCHG, label = total2.EMPNFARMCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Non-farm Employment Job Gains/Losses, \n 55% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only goods employment gains/losses for plotting
+total5 <- total3[c(-2, -4)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize4 <- total5 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total2.USGOODCHG));visualize4 
+visualize5 <- total5 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total2.USGOODCHG)); visualize5
+#Calculate percentage of job gains in the recovery
+visualize6 <- (visualize5 / visualize4) * 100; visualize6
+
+#Plot line graph separately as it is difficult to see lines otherwise
+plot2 <- ggplot(data = total5, aes(x = DATE, y = total2.USGOODCHG, label = total2.USGOODCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Goods Employment Job Gains/Losses, \n 59% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only services employment gains/losses for plotting
+total6 <- total3[c(-2: -3)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize7 <- total6 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total2.SRVPRDCHG));visualize7 
+visualize8 <- total6 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total2.SRVPRDCHG)); visualize8
+#Calculate percentage of job gains in the recovery
+visualize9 <- (visualize8 / visualize7) * 100; visualize9
+
+#Plot line graph separately as it is difficult to see lines otherwise
+plot3 <- ggplot(data = total6, aes(x = DATE, y = total2.SRVPRDCHG, label = total2.SRVPRDCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +                         
+  labs(x = "", y="", title = "Total Goods Employment Job Gains/Losses, 53% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+require(gridExtra)
+grid.arrange(plot1, plot2, plot3, ncol=2)
+
+#Alternative plot - Plotting all employment change series on one plot
+
+dummy_clean1 <- gather(total3, "Category", "Value", 2:4, na.rm = TRUE); dummy_clean1
+visualizeall1 <- dummy_clean1 %>% group_by(Category)
+plotall1 <- ggplot(data = visualizeall1, aes(x = DATE, y = Value)) + geom_line(aes(color = factor(Category), group = Category))
+require(gridExtra)
+grid.arrange(plotall1, ncol=1)
+
+```
+
+## Part I Conclusions: 
+
+Using statistical analysis and graphs to visualize the input data series leads us to the conclusion that the input data for total non-farm, goods and services is not normally distributed as depicted by histograms, the Q-Q plots, the skewness and kurtosis. Total non-farm employment and services employment are platykurtic as depicted by the excess kurtosis exceeding -1. Also, the goods employment is skewed to the left while the other two input data series are skewed to the right.
+
+Graphing the high-level employment metrics leads us to the conclusion that the services sector has been unduly impacted during the coronavirus recession because of lockdowns and restrictions on movement - think restaurants and hair salons. We will analyze further below which service sectors have been impacted the most among select industry examples. Secondly, as it relates to job gains since May, the employment recovery has been slow. We see that only 53% of service sector jobs have been recovered, this makes intuitive sense since the resurgence of the corona virus in several states has given pause to state reopening plans and in some cases reversed them. 
+
+Finally, goods employment has fared better than the services recovery, manufacturing is the largest industry within the goods sector and this tells us that goods demand and hence production has helped prop up goods employment. A big stimulus package to businesses and consumers helped spending.
+
+## Part II: industry-level analysis
+
+Here specifically, I'll consider 5 industries to see the impact - Manufacturing, Food services and drinking places, Professional & Business services, Retail Trade and  Warehousing. Without performing any analysis, we can perhaps come to the intuitive conclusion that since services were worst hit as seen above, it would be logical to expect that employment at Retail trade and Food services and drinking places would be more impacted than employment at Professional & Business services or Warehousing. Let's see what the data tells us.
+
+```{r}
+##Include one statistical analysis and at least one graphic that describes or validates the data
+##Here I check if each of the input data series is a normal distribution by checking the histogram, the Q-Q plot and the Shapiro test which is a widely used test of normality
+
+par(mfrow=c(3,2))
+
+hist(dfmanemp$MANEMP, 100, col="black")
+qqnorm(dfmanemp$MANEMP); qqline(dfmanemp$MANEMP, col = 2)
+shapiro.test(dfmanemp$MANEMP)
+kurtosis(dfmanemp$MANEMP)
+skewness(dfmanemp$MANEMP)
+
+hist(dfuspbs$USPBS, 100, col="black")
+qqnorm(dfuspbs$USPBS); qqline(dfuspbs$USPBS, col = 2)
+shapiro.test(dfuspbs$USPBS)
+kurtosis(dfuspbs$USPBS)
+skewness(dfuspbs$USPBS)
+
+hist(dfuswhs$USWHS, 100, col="black")
+qqnorm(dfuswhs$USWHS); qqline(dfuswhs$USWHS, col = 2)
+shapiro.test(dfuswhs$USWHS)
+kurtosis(dfuswhs$USWHS)
+skewness(dfuswhs$USWHS)
+
+hist(dfustrade$USTRADE, 100, col="black")
+qqnorm(dfustrade$USTRADE); qqline(dfustrade$USTRADE, col = 2)
+shapiro.test(dfustrade$USTRADE)
+kurtosis(dfustrade$USTRADE)
+skewness(dfustrade$USTRADE)
+
+hist(dffandb$USFANDB, 100, col="black")
+qqnorm(dffandb$USFANDB); qqline(dffandb$USFANDB, col = 2)
+shapiro.test(dffandb$USFANDB)
+kurtosis(dffandb$USFANDB)
+skewness(dffandb$USFANDB)
+
+#Calculate the difference in Manufacturing employment
+dfmanemp$change <- with(dfmanemp, c(NA, diff(MANEMP))); head(dfmanemp)
+#Calculate the difference in Professional & Business Services employment
+dfuspbs$change <- with(dfuspbs, c(NA, diff(USPBS))); head(dfuspbs)
+#Calculate the difference in Warehouse employment
+dfuswhs$change <- with(dfuswhs, c(NA, diff(USWHS))); head(dfuswhs)
+#Calculate the difference in Retail Trade employment
+dfustrade$change <- with(dfustrade, c(NA, diff(USTRADE))); head(dfustrade)
+#Calculate the difference in Food services & drinking places employment
+dffandb$change <- with(dffandb, c(NA, diff(USFANDB))); head(dffandb)
+#Create a new data frame with the three difference columns calculate above
+total7 <- data.frame(dfmanemp, dfuspbs, dfustrade)
+#Create a new data frame that includes the difference columns for Warehouse and retail trade employment. These two data series begin in the 90's, so we will compare these separately.
+total8 <- data.frame(dfuswhs, dffandb)
+#All the difference columns are named change, so rename to more discernible column names
+total9 <- rename(total7, MANEMPCHG = "change", USPBSCHG = "change.1", USTRADECHG = "change.2")
+#All the difference columns are named change, so rename to more discernible column names
+total10 <- rename(total8, USWHSCHG = "change", USFANDBCHG = "change.1")
+#Use lubridate to change the class of the date variable from factor to DATE
+total11 <- data.frame(mdy(total9$DATE), total9$MANEMPCHG, total9$USPBSCHG, total9$USTRADECHG)
+#Rename the converted DATE column
+total12 <- rename(total11, DATE = "mdy.total9.DATE.")
+
+#Retain only Manufacturing employment gains/losses for plotting
+total13 <- total12[c(-3, -4)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize10 <- total13 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total9.MANEMPCHG));visualize10 
+visualize11 <- total13 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total9.MANEMPCHG)); visualize11
+#Calculate percentage of job gains in the recovery
+visualize12 <- (visualize11 / visualize10) *100; visualize12
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot4 <- ggplot(data = total13, aes(x = DATE, y = total9.MANEMPCHG, label = total9.MANEMPCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Manufacturing Employment Job Gains/Losses, \n 55% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only Professional and Business Services employment gains/losses for plotting
+total14 <- total12[c(-2, -4)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize13 <- total14 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total9.USPBSCHG));visualize13 
+visualize14 <- total14 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total9.USPBSCHG)); visualize14
+#Calculate percentage of job gains in the recovery
+visualize15 <- (visualize14 / visualize13) *100; visualize15
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot5 <- ggplot(data = total14, aes(x = DATE, y = total9.USPBSCHG, label = total9.USPBSCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Professional & Business Services Employment Job Gains/Losses, \n 50% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only Retail Trade employment gains/losses for plotting
+total15 <- total12[c(-2, -3)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize16 <- total15 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total9.USTRADECHG));visualize16 
+visualize17 <- total15 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total9.USTRADECHG)); visualize17
+#Calculate percentage of job gains in the recovery
+visualize18 <- (visualize17 / visualize16) *100; visualize18
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot6 <- ggplot(data = total15, aes(x = DATE, y = total9.USTRADECHG, label = total9.USTRADECHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Retail Trade Employment Job Gains/Losses, \n 79% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+require(gridExtra)
+grid.arrange(plot4, plot5, plot6, ncol=2)
+
+#Use lubridate to change the class of the date variable from factor to DATE
+total16 <- data.frame(mdy(total10$DATE), total10$USWHSCHG, total10$USFANDBCHG)
+#Rename the converted DATE column
+total17 <- rename(total16, DATE = "mdy.total10.DATE.")
+
+#Retain only Warehouse employment gains/losses for plotting
+total18 <- total17[c(-3)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize19 <- total18 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total10.USWHSCHG));visualize19 
+visualize20 <- total18 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total10.USWHSCHG)); visualize20
+#Calculate percentage of job gains in the recovery
+visualize21 <- (visualize20 / visualize19) *100; visualize21
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot7 <- ggplot(data = total18, aes(x = DATE, y = total10.USWHSCHG, label = total10.USWHSCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Warehouse Employment Job Gains/Losses, \n 169% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only Food & Beverage employment gains/losses for plotting
+total19 <- total17[c(-2)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize22 <- total19 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total10.USFANDBCHG));visualize22 
+visualize23 <- total19 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total10.USFANDBCHG)); visualize23
+#Calculate percentage of job gains in the recovery
+visualize24 <- (visualize23 / visualize22) *100; visualize24
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot8 <- ggplot(data = total19, aes(x = DATE, y = total10.USFANDBCHG, label = total10.USFANDBCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Food Services & Drinking Places Employment Job Gains/Losses, \n 65% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+require(gridExtra)
+grid.arrange(plot7, plot8, ncol=2)
+
+#Alternative plot - Plotting all employment change series on one plot
+
+dummy_clean2 <- gather(total12, "Category", "Value", 2:4, na.rm = TRUE); dummy_clean2
+visualizeall2 <- dummy_clean2 %>% group_by(Category)
+plotall2 <- ggplot(data = visualizeall2, aes(x = DATE, y = Value)) + geom_line(aes(color = factor(Category), group = Category))
+
+dummy_clean3 <- gather(total17, "Category", "Value", 2:3, na.rm = TRUE); dummy_clean3
+visualizeall3 <- dummy_clean3 %>% group_by(Category)
+plotall3 <- ggplot(data = visualizeall3, aes(x = DATE, y = Value)) + geom_line(aes(color = factor(Category), group = Category))
+
+require(gridExtra)
+grid.arrange(plotall2, plotall3, ncol=1)
+
+```
+
+## Part II Conclusion:
+
+Using statistical analysis and graphs to visualize the input data series leads us to the conclusion that the input data for manufacturing, US professional and business services, retail trade and food service and drinking places employment is platykurtic (thin tailed) as depicted by histograms, the Q-Q plots, the skewness and kurtosis. Of the 4 data series, manufacturing employment has a slight left skew as depicted by the negative reading and the histogram (indicates the mean of the data values is less than the median) while professional and business services had a slight right skew. 
+
+On the other hand, warehouse employment is leptokurtic (fat-tailed), intuitively perhaps this explains the structural change in employment trends in this industry which took off in the last cycle, breaking trend with historical performance in the industry. It also has a strong right skew as depicted by the histogram and the excess skewness reading of 1.2.   
+
+At first glance although job losses in the Retail trade industry were horrendous with 2.4 million job losses, by the end of October 79% of these lost jobs were gained. In contrast, of the 1.4 million manufacturing jobs lost, only 55% of these jobs were gained and similarly of the 2.3 million professional and business service jobs lost, only 50% were gained. While some retail brick-and-mortar stores permanently shuttered, others opened with social distancing precautions in place potentially explaining the higher share of job gains in the Retail Trade industry. In contrast, the manufacturing sector has witnessed a secular decline in employment since the late 70's and it can be argued that some of the manufacturing firms that shuttered during the lockdowns did not open doors again and any future recovery in manufacturing employment will be gradual. Likewise, while at first glance it may appear surprising that there were job losses in white-collar professional & business services, a closer look shows that the P&BS category includes 3 NAICS codes - Professional, Scientific, and Technical Services, Management of Companies and Enterprises and a third NAICS category of Administrative and Support and Waste Management and Remediation Services. It is this category that reported job losses as several administrative jobs were eliminated due to remote working and this has been reported by BLS.
+
+On the bright side of things, we see that the Warehouse sector more than gained its share of job losses, the sector reported a whopping 169% employment gain since the lockdowns ended. As consumers shifted their consumption online, there was an increasing need for warehouse workers to ship goods for orders placed online. The hard data thus validates the anecdotal announcements by Amazon, Target, Walmart and other retailers of their hiring plans for warehouse workers. 
+
+Lastly, we take a look at the Food services & drinking places sector, with several restaurants shuttered during the lock downs, waitstaff were layed off but as the economy opened up, several of these lost jobs were then gained at a respectable 65% share.  
+
+## Part III: Did less-educated workers suffer greater employment losses than more educated workers during the initial lockdowns?
+
+Here specifically, I'll consider whether education played a role in the disproportionate loss of jobs during the pandemic. To analyze this trend, I'll compare job losses for employees with an education level equaling high school or less than high school with job losses for employees with a bachelor's degree or perhaps some college education.
+
+```{r}
+##Include one statistical analysis and at least one graphic that describes or validates the data
+##Here I check if each of the input data series is a normal distribution by checking the histogram, the Q-Q plot and the Shapiro test which is a widely used test of normality
+
+par(mfrow=c(2,2))
+
+hist(dfbach$USBACH, 100, col="black")
+qqnorm(dfbach$USBACH); qqline(dfbach$USBACH, col = 2)
+shapiro.test(dfbach$USBACH)
+kurtosis(dfbach$USBACH)
+skewness(dfbach$USBACH)
+
+hist(dfcoll$USCOLL, 100, col="black")
+qqnorm(dfcoll$USCOLL); qqline(dfcoll$USCOLL, col = 2)
+shapiro.test(dfcoll$USCOLL)
+kurtosis(dfcoll$USCOLL)
+skewness(dfcoll$USCOLL)
+
+hist(dfhigh$USHIGH, 100, col="black")
+qqnorm(dfhigh$USHIGH); qqline(dfhigh$USHIGH, col = 2)
+shapiro.test(dfhigh$USHIGH)
+kurtosis(dfhigh$USHIGH)
+skewness(dfhigh$USHIGH)
+
+hist(dfnhigh$USNHIGH, 100, col="black")
+qqnorm(dfnhigh$USNHIGH); qqline(dfnhigh$USNHIGH, col = 2)
+shapiro.test(dfnhigh$USNHIGH)
+kurtosis(dfnhigh$USNHIGH)
+skewness(dfnhigh$USNHIGH)
+
+#Calculate the difference in employment for bachelor degree holders
+dfbach$change <- with(dfbach, c(NA, diff(USBACH))); head(dfbach)
+#Calculate the difference in employment for employees with some college
+dfcoll$change <- with(dfcoll, c(NA, diff(USCOLL))); head(dfcoll)
+#Calculate the difference in employment for employees with only high school diploma
+dfhigh$change <- with(dfhigh, c(NA, diff(USHIGH))); head(dfhigh)
+#Calculate the difference in employment for employees with no high school education
+dfnhigh$change <- with(dfnhigh, c(NA, diff(USNHIGH))); head(dfnhigh) 
+#Create a new data frame with the three difference columns calculate above
+total20 <- data.frame(dfbach, dfcoll, dfhigh, dfnhigh)
+#All the difference columns are named change, so rename to more recognizable column names
+total21 <- rename(total20, USBACHCHG = "change", USCOLLCHG = "change.1", USHIGHCHG = "change.2", USNHIGHCHG = "change.3")
+#Use lubridate to change the class of the date variable from factor to DATE
+total22 <- data.frame(mdy(total21$DATE), total21$USBACHCHG, total21$USCOLLCHG, total21$USHIGHCHG, total21$USNHIGHCHG)
+#Rename the converted DATE column
+total23 <- rename(total22, DATE = "mdy.total21.DATE.")
+
+#Retain only workers with Bachelor's degree for plotting employment gains and losses
+total24 <- total23[c(-3 : -5)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize26 <- total24 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total21.USBACHCHG));visualize26 
+visualize27 <- total24 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total21.USBACHCHG)); visualize27
+#Calculate percentage of job gains in the recovery
+visualize28 <- (visualize27 / visualize26) *100; visualize28
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot9 <- ggplot(data = total24, aes(x = DATE, y = total21.USBACHCHG, label = total21.USBACHCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Job Gains/Losses for Workers' with Bachelor's Degrees, \n 52% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only workers with college degree for plotting employment gains and losses
+total25 <- total23[c(-2, -4, -5)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize29 <- total25 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total21.USCOLLCHG));visualize29 
+visualize30 <- total25 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total21.USCOLLCHG)); visualize30
+#Calculate percentage of job gains in the recovery
+visualize31 <- (visualize30 / visualize29) *100; visualize31
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot10 <- ggplot(data = total25, aes(x = DATE, y = total21.USCOLLCHG, label = total21.USCOLLCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Job Gains/Losses for Workers' with some \n college education, 52% of jobs lost during the \n lockdowns have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only workers with high school diploma for plotting employment gains and losses
+total26 <- total23[c(-2, -3, -5)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize32 <- total26 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total21.USHIGHCHG));visualize32 
+visualize33 <- total26 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total21.USHIGHCHG)); visualize33
+#Calculate percentage of job gains in the recovery
+visualize34 <- (visualize33 / visualize32) *100; visualize34
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot11 <- ggplot(data = total26, aes(x = DATE, y = total21.USHIGHCHG, label = total21.USHIGHCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Job Gains/Losses for Workers' with a high school \n diploma, 69% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only workers with less than a high school education for plotting employment gains and losses
+total27 <- total23[c(-2, -3, -4)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize35 <- total27 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total21.USNHIGHCHG));visualize35 
+visualize36 <- total27 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total21.USNHIGHCHG)); visualize36
+#Calculate percentage of job gains in the recovery
+visualize37 <- (visualize36 / visualize35) *100; visualize37
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot12 <- ggplot(data = total27, aes(x = DATE, y = total21.USNHIGHCHG, label = total21.USNHIGHCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Job Gains/Losses for Workers' no high school \n diploma, 65% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+require(gridExtra)
+grid.arrange(plot9, plot10, plot11, plot12, ncol=2)
+
+#Also plotting all 4 education cohorts on the same plot using the wide to long transformation and ggplot. It is difficult to see the individual trends. 
+
+#Alternative plot - Plotting all employment change series on one plot
+
+dummy_clean4 <- gather(total23, "Category", "Value", 2:5, na.rm = TRUE); dummy_clean4
+visualizeall4 <- dummy_clean4 %>% group_by(Category)
+plotall4 <- ggplot(data = visualizeall4, aes(x = DATE, y = Value)) + geom_line(aes(color = factor(Category), group = Category))
+
+require(gridExtra)
+grid.arrange(plotall4, ncol=1)
+```
+## Part III Conclusion:
+
+Using statistical analysis and graphs to visualize the input data series leads us to the conclusion that the input data for bachelors' degree employment is platykurtic (thin tailed) as depicted by histograms, the Q-Q plots, the skewness and kurtosis. The remaining three data series are leptokurtic (fat-tailed), especially the workers with high school and no high-school education, both of which had particularly large values of excess kurtosis. In terms of skew, the some college education, high school and no high school employment series are all left-skewed and the skewness increases with lower levels of education. So, workers with high school education had a higher skew than workers with some college degree, but the left skew somewhat declined for the workers with the lowest level of education (those who hadn't completed any high school). We see below that this cohort of workers also lost fewer jobs than the ones who had completed some high school and this data series needs further investigation.
+
+Unsurprisingly, in level terms, those with a lesser education fared poorly by bearing the brunt of the job losses. Only 3.6 million workers with bachelor's degrees lost their jobs, compared to 5.7 million workers who had some college degree and relatively less severe than the 7.5 million workers with high school diplomas who lost their jobs. The surprising number was the 2.4 million workers who had less than a high school diploma who lost their jobs.
+
+Taking a closer look at the graph above, we can see that hiring for workers with Bachelor's degrees resumed since May but this cohort again reported job losses in September and October which brought down the gain to just over 50%. In comparison, those with some college degree saw a greater loss in terms of the level but also reported fewer losses in September. As we go down the education spectrum, we see a greater volatility in terms of both job gains and losses, for example of those 7.5 million workers with a high school diploma that lost their jobs during the lockdowns, 5.1 million are already employed but potentially at the risk of losing jobs again should another lockdown occur. Perhaps, these are restaurant waitstaff and other low-wage workers who can be fired and hired easily!   
+
+The real suprise as I mentioned is those workers who had less than a high-school diploma, only 2.4 million of these workers lost their jobs and reported the highest percentage employment gain among the four cohorts. This needs further investigation. 
+
+## Part IV: Which demographic groups experienced a disproportionate share of job losses during the initial lockdowns? 
+
+Here specifically, I'll consider which of the three racial groups - African-Americans, Hispanics or Whites experienced the worst job losses, I'll also compare the employment-to-population ratio for men and women and specifically take a look at married women as there is anecdotal evidence to indicate they have disproportionately shouldered childcare duties and some have altogether left the workforce as a result of the pandemic.
+
+```{r}
+##Include one statistical analysis and at least one graphic that describes or validates the data
+##Here I check if each of the input data series is a normal distribution by checking the histogram, the Q-Q plot and the Shapiro test which is a widely used test of normality
+
+par(mfrow=c(3,2))
+
+hist(dfblack$USBLACK, 100, col="black")
+qqnorm(dfblack$USBLACK); qqline(dfblack$USBLACK, col = 2)
+shapiro.test(dfblack$USBLACK)
+kurtosis(dfblack$USBLACK)
+skewness(dfblack$USBLACK)
+
+hist(dfhis$USHIS, 100, col="black")
+qqnorm(dfhis$USHIS); qqline(dfhis$USHIS, col = 2)
+shapiro.test(dfhis$USHIS)
+kurtosis(dfhis$USHIS)
+skewness(dfhis$USHIS)
+
+hist(dfwhite$USWHITE, 100, col="black")
+qqnorm(dfwhite$USWHITE); qqline(dfwhite$USWHITE, col = 2)
+shapiro.test(dfwhite$USWHITE)
+kurtosis(dfwhite$USWHITE)
+skewness(dfwhite$USWHITE)
+
+par(mfrow=c(2,2))
+
+hist(dfempw$USEMPW, 100, col="black")
+qqnorm(dfempw$USEMPW); qqline(dfempw$USEMPW, col = 2)
+shapiro.test(dfempw$USEMPW)
+kurtosis(dfempw$USEMPW)
+skewness(dfempw$USEMPW)
+
+hist(dfempm$USEMPM, 100, col="black")
+qqnorm(dfempm$USEMPM); qqline(dfempm$USEMPM, col = 2)
+shapiro.test(dfempm$USEMPM)
+kurtosis(dfempm$USEMPM)
+skewness(dfempm$USEMPM)
+
+hist(dfmempw$USMEMPW, 100, col="black")
+qqnorm(dfmempw$USMEMPW); qqline(dfmempw$USMEMPW, col = 2)
+shapiro.test(dfmempw$USMEMPW)
+kurtosis(dfmempw$USMEMPW)
+skewness(dfmempw$USMEMPW)
+
+hist(dfmempm$USMEMPM, 100, col="black")
+qqnorm(dfmempm$USMEMPM); qqline(dfmempm$USMEMPM, col = 2)
+shapiro.test(dfmempm$USMEMPM)
+kurtosis(dfmempm$USMEMPM)
+skewness(dfmempm$USMEMPM)
+
+#Calculate the difference in employment for African-American workers
+dfblack$change <- with(dfblack, c(NA, diff(USBLACK))); head(dfblack)
+#Calculate the difference in employment for Hispanic workers
+dfhis$change <- with(dfhis, c(NA, diff(USHIS))); head(dfhis)
+#Calculate the difference in employment for White workers
+dfwhite$change <- with(dfwhite, c(NA, diff(USWHITE))); head(dfwhite)
+
+#Calculate the difference in employment for female workers
+dfempw$change <- with(dfempw, c(NA, diff(USEMPW))); head(dfempw)
+#Calculate the difference in employment for male workers
+dfempm$change <- with(dfempm, c(NA, diff(USEMPM))); head(dfempm)
+#Calculate the difference in employment for married female workers
+dfmempw$change <- with(dfmempw, c(NA, diff(USMEMPW))); head(dfmempw)
+#Calculate the difference in employment for married male workers
+dfmempm$change <- with(dfmempm, c(NA, diff(USMEMPM))); head(dfmempm)
+
+#All of the different time series above have different lengths, so I bring them to the same length as the shortest time series (Hispanic workers which begins 3/1/1973) before combining.
+drop1 <- dfwhite[c(-1 : -230),, drop = F]
+drop2 <- dfblack[c(-1 : -14),, drop = F]
+drop3 <- dfempw[c(-1 : -302),, drop = F]
+drop4 <- dfempm[c(-1 : -302),, drop = F]
+drop5 <- dfmempm[c(-1 : -218),, drop = F]
+drop6 <- dfmempw[c(-1 : -218),, drop = F]
+#Combine columns into one dataframe
+total28 <- data.frame(drop1, drop2, drop3, drop4, drop5, drop6, dfhis)
+#All the difference columns are named change, so rename to more recognizable column names
+total29 <- rename(total28, USWHITECHG = "change", USBLACKCHG = "change.1", USEMPWCHG = "change.2", USEMPMCHG = "change.3", USMEMPMCHG = "change.4", USMEMPWCHG = "change.5", USHISCHG = "change.6")
+#Use lubridate to change the class of the date variable from factor to DATE
+total30 <- data.frame(mdy(total29$DATE), total29$USWHITECHG, total29$USBLACKCHG, total29$USHISCHG, total29$USEMPWCHG, total29$USEMPMCHG, total29$USMEMPWCHG, total29$USMEMPMCHG)
+#Rename the converted DATE column
+total31 <- rename(total30, DATE = "mdy.total29.DATE.")
+
+#Retain only White workers with Bachelor's degree for plotting employment gains and losses
+total32 <- total31[c(-3 : -8)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize39 <- total32 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total29.USWHITECHG));visualize39 
+visualize40 <- total32 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total29.USWHITECHG)); visualize40
+#Calculate percentage of job gains in the recovery
+visualize41 <- (visualize40 / visualize39) *100; visualize41
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot14 <- ggplot(data = total32, aes(x = DATE, y = total29.USWHITECHG, label = total29.USWHITECHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Job Gains/Losses for Caucasian workers, \n 69% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only African-American workers for plotting employment gains and losses
+total33 <- total31[c(-2, -4, -5, -6, -7, -8)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize42 <- total33 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total29.USBLACKCHG));visualize42 
+visualize43 <- total33 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total29.USBLACKCHG)); visualize43
+#Calculate percentage of job gains in the recovery
+visualize44 <- (visualize43 / visualize42) *100; visualize44
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot15 <- ggplot(data = total33, aes(x = DATE, y = total29.USBLACKCHG, label = total29.USBLACKCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Job Gains/Losses for African-American workers, \n 50% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only Hispanic workers for plotting employment gains and losses
+total34 <- total31[c(-2: -3, -5, -6 ,-7, -8)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize45 <- total34 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total29.USHISCHG));visualize45 
+visualize46 <- total34 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total29.USHISCHG)); visualize46
+#Calculate percentage of job gains in the recovery
+visualize47 <- (visualize46 / visualize45) *100; visualize47
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot16 <- ggplot(data = total34, aes(x = DATE, y = total29.USHISCHG, label = total29.USHISCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Job Gains/Losses for Hispanic workers, \n 68% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+require(gridExtra)
+grid.arrange(plot14, plot15, plot16, ncol=2)
+
+#Also plotting all 3 racial cohorts on the same plot using the wide to long transformation and ggplot. It is difficult to see the individual trends. 
+
+total35 <- total31[c(-5 : -8)]
+dummy_clean5 <- gather(total35, "Category", "Value", 2:4, na.rm = TRUE); dummy_clean5
+visualizeall5 <- dummy_clean5 %>% group_by(Category)
+plotall5 <- ggplot(data = visualizeall5, aes(x = DATE, y = Value)) + geom_line(aes(color = factor(Category), group = Category))
+
+require(gridExtra)
+grid.arrange(plotall5, ncol=1)
+
+#Retain only Female workers for plotting employment gains and losses
+total36 <- total31[c(-2: -3, -4, -6 ,-7, -8)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize49 <- total36 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total29.USEMPWCHG));visualize49 
+visualize50 <- total36 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total29.USEMPWCHG)); visualize50
+#Calculate percentage of job gains in the recovery
+visualize51 <- (visualize50 / visualize49) *100; visualize51
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot18 <- ggplot(data = total36, aes(x = DATE, y = total29.USEMPWCHG, label = total29.USEMPWCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Job Gains/Losses for Women, \n 65% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only Female workers for plotting employment gains and losses
+total37 <- total31[c(-2: -3, -4, -5 ,-7, -8)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize52 <- total37 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total29.USEMPMCHG));visualize52 
+visualize53 <- total37 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total29.USEMPMCHG)); visualize53
+#Calculate percentage of job gains in the recovery
+visualize54 <- (visualize53 / visualize52) *100; visualize54
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot19 <- ggplot(data = total37, aes(x = DATE, y = total29.USEMPMCHG, label = total29.USEMPMCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Job Gains/Losses for Men, \n 64% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only Female married workers for plotting employment gains and losses
+total38 <- total31[c(-2: -3, -4, -5 ,-6, -8)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize55 <- total38 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total29.USMEMPWCHG));visualize55 
+visualize56 <- total38 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total29.USMEMPWCHG)); visualize56
+#Calculate percentage of job gains in the recovery
+visualize57 <- (visualize56 / visualize55) *100; visualize57
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot20 <- ggplot(data = total38, aes(x = DATE, y = total29.USMEMPWCHG, label = total29.USMEMPWCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Job Gains/Losses for Married women, \n 60% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+#Retain only Male married workers for plotting employment gains and losses
+total39 <- total31[c(-2: -3, -4, -5 ,-6, -7)]
+#Calculate the sum of job losses during the pandemic and job gains since May
+visualize58 <- total39 %>% filter(DATE >= "2020-03-01" & DATE <="2020-04-01") %>%
+  summarise(sum1 = sum(total29.USMEMPMCHG));visualize58 
+visualize59 <- total39 %>% filter(DATE >= "2020-05-01") %>%
+  summarise(sum2 = sum(total29.USMEMPMCHG)); visualize59
+#Calculate percentage of job gains in the recovery
+visualize60 <- (visualize59 / visualize58) *100; visualize60
+
+#Plot line graph separately as it is difficult to see lines otherwise because of differing scales
+plot21 <- ggplot(data = total39, aes(x = DATE, y = total29.USMEMPMCHG, label = total29.USMEMPMCHG)) + 
+  geom_line(size = 1.05) + theme_minimal()+ scale_x_date(date_breaks = "12 years", date_labels = "%Y") + scale_y_continuous(sec.axis = dup_axis()) + 
+  theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.subtitle=element_text(size=6, face="italic"),
+        plot.title=element_text(size=8,face="bold"),
+        axis.title.x = element_text(size = 6),
+        axis.title.y = element_text(size = 6)) +
+  labs(x = "", y="", title = "Total Job Gains/Losses for Married men, \n 48% of jobs lost during the lockdowns \n have been gained since May", subtitle = "in thousands (seasonally adjusted)",
+       caption = "Source: FRED")
+
+require(gridExtra)
+grid.arrange(plot18, plot19, plot20, plot21, ncol=2)
+
+#Plot employment-to-population ratio for men and women
+total30 <- data.frame(mdy(total29$DATE), total29$USWHITECHG, total29$USBLACKCHG, total29$USHISCHG, total29$USEMPWCHG, total29$USEMPMCHG, total29$USMEMPWCHG, total29$USMEMPMCHG)
+combemp2pop <- data.frame(mdy(dfemp2popm$DATE), dfemp2popm$USEMP2POPM, dfemp2popfem$USEMP2POPFEM)
+comb_clean1 <- gather(combemp2pop, "Category", "Value", 2:3, na.rm = TRUE); comb_clean1
+comb_clean2 <- rename(comb_clean1, DATE = "mdy.dfemp2popm.DATE.")
+visualizecomb <- comb_clean2 %>% group_by(Category)
+plotcomb <- ggplot(data = visualizecomb, aes(x = DATE, y = Value)) + geom_line(aes(color = factor(Category), group = Category))
+
+require(gridExtra)
+grid.arrange(plotcomb, ncol=1)
+
+#Also plotting all 4 gender cohorts on the same plot using the wide to long transformation and ggplot. It is difficult to see the individual trends.
+
+#Alternative plot - Plotting all employment change series on one plot
+
+total40 <- total31[c(-2 : -4)]
+dummy_clean6 <- gather(total40, "Category", "Value", 2:5, na.rm = TRUE); dummy_clean6
+visualizeall6 <- dummy_clean6 %>% group_by(Category)
+plotall6 <- ggplot(data = visualizeall6, aes(x = DATE, y = Value)) + geom_line(aes(color = factor(Category), group = Category))
+
+require(gridExtra)
+grid.arrange(plotall6, ncol=1)
+
+```
+## Part IV Conclusions: 
+
+Using statistical analysis and graphs to visualize the input data series leads us to the conclusion that the input data for African-American, Hispanic and White workers is platykurtic (thin tailed) as depicted by histograms, the Q-Q plots, the skewness and kurtosis readings. Also, the Hispanic employment data is right-skewed while the White employment data is left-skewed.
+
+All four remaining series - women and men employment as well as married women and men employment data is platykurtic. The married women data series has the most discernible left skew of the 4 data series.
+
+In terms of level, Caucasian workers were the worst impacted with 19 million job losses but have also gained approximately 69% of the jobs lost. The Hispanic workers similarly fared better with 68% of job losses having been gained. This group also lost only 6 million jobs compared to 19 million jobs lost by Caucasians. This makes sense given this is a minority group. Lastly, African-American workers although lost only 3.5 million jobs, their job recovery was also the slowest among the demographic groups with only 50% of those lost jobs gained since May.    
+
+At first glance, comparing male and female workers, it appears that the recovery was on equal footing - 65% of jobs lost by women were gained whereas 64% of jobs lost by men were gained but this belies the employment losses. Female workers lost 13.4 million jobs compared to 11.9 million for men. So not only did women lose more jobs, in terms of recovery they are also half a percentage point behind male workers. Women comprise a bigger share of low-wage service jobs and this could be leading to the under performance versus men. Finally, I compared married female and male workers, the results were surprising here with 60% of jobs gained in terms of recovery for women compared to 48% for their male married colleagues. This would imply that perhaps men and not women quit the workforce to either provide childcare or eldercare. These results need to be validated before making any conclusions off of.
+
+## Final conclusions:
+
+1. All employment data series have skewness and kurtosis associated with them. Real-life data is rarely normal.
+
+2. Per analysis above of high-level employment metrics, we arrive at the conclusion that the services sector has been unduly impacted during the coronavirus recession because of lockdowns and restrictions on movement. Goods employment fared relatively better.
+
+3. A deeper dive at the industry level reveals that although Retail trade and Food services and drinking places were unduly impacted in terms of job losses by the lockdowns, by the end of October both of these sectors had regained 79% and 65% of lost jobs respectively. In contrast, industries in secular decline such as manufacturing only regained 55% of lost jobs and although counter-intuitive at first the Professional & Business services also reported job gains of only 50%. Several admin jobs were lost during the pandemic due to workers being able to work remotely and since a majority of the white-collar workforce is still working remotely, these jobs were not gained.
+
+4. It was not all bad news at the industry-level, the warehouse sector gained more jobs than it lost with a whopping 169% share as consumers increasingly shopped online and online retailers went on a hiring frenzy at their warehouses.
+
+5. In terms of education levels, the least educated bore the brunt of the job losses with a disproportionate 7.5 million workers with only a high school level education losing jobs compared to 5.7 million job losses for workers with some college degree and only 3.6 million job losses for workers with a bachelor's degree. 
+
+6. In terms of education background analysis, the other interesting takeaway is that there is a higher volatility for workers who are least educated. Although 7.5 and 5.7 million workers with a high school diploma and some college education, respectively lost their jobs during the lock downs, by October these two cohorts were performing well with nearly 70% and 65% of job gains, an outperformance compared to only 52% of job gains for the more educated cohorts.
+
+7. The comparison of racial employment trends reveals that employment recovery was slowest for African-Americans, while Caucasians and Hispanic workers reported a much better recovery with approximately 70% of previously lost jobs gained by the end of October.
+
+8. Finally, analyzing employment trends by gender reveals that the employment recovery was on an equal footing for both men and women. But in level terms, women reported more job losses than men at 13.4 million compared to 11.9 million losses for men. Women comprise a bigger share of low-wage service jobs and this could be leading to the greater job losses versus men. 
+
+9. The big surprise was analyzing employment trends by marital status, 60% of jobs lost by married women were gained compared to only 48% for their married colleagues. The employment-to-population ratio for women and men are also surprising, the ratio declined only 3 percentage point for women compared to 5 percentage points for men. These data series need to be analyzed further to infer firm conclusions.
+
+
+
