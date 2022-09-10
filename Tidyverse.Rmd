@@ -1,0 +1,38 @@
+---
+title: "Tidyverse recipes"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+##The core tidyverse includes several useful packages - readr, dplyr and ggplot2 etc. These are the three packages I've used in my analysis below starting with readr's read_csv function to read in the input csv file, then moving to dplyr's filter function to remove NA records and using dplyr's summarize function to identify distinct groupings for visualization. Finally I use ggplot to visualize the tidied data with some powerful graphics.
+
+##The dataset used here is from fivethirtyeight and is the daily show guests on Jon Stewart's show dataset. I chose this dataset as I was curious if the mix of guests on the show has changed over the years. See conclusion below. For now, I focus on the various functions I used to read in, clean and visualize the data. 
+
+##Step 1: Read the file - The input file is uploaded to github - https://raw.githubusercontent.com/tponnada/DATA607/master/daily_show_guests.csv and the csv file is read in from the weblink. The file names in the raw file are inconsistent, e.g. caps for YEAR and lower-case for other columns and a typo in the second column which should be Google_Knowledge_Occupation, not GoogleKnowlege_Occupation (missing d). These col names can be conveniently be passed as a charecter vector in the read_csv function which is the approach used here.
+
+##Step 2: Tidy the data - I used the filter function to remove NA's, 0's and dashes in the Google_Knowledge_Occupation column which are also missing or illegible values in the Group column, this results in filtering out 31 records, leaving us with a good sample of 2,662 records. There are two categories of variables which can be used to answer the question - Has the mix of guests on the show changed over the years? Namely, the Google_Knowledge_Occupation and the Group column. I use the summarize function, also part of dplyr to fund unique groupings in the data for both columns. This analysis shows that there are 396 unique groups defined in the Google_Knowledge_Occupation column but only 17 in the Group column, furthermore the individual groupings in the group column appear more intuitive and are broad categories and hence I used these for the analysis.
+
+##Step 3: Visualization - Next I used ggplot to visualize the analysis. I plotted bar graphs but used the facet wrap to see trends across years. Initially, I faced an issue with overlapping x-axis labels but researching the issue helped me use the theme argument and set the axis text and tick attributes to blank values.
+
+##Step 4: Conclusion - In the initial years of the dataset, most of the guests on the show were actors but this steadily declined such that post-GFC the guests on the show from the media industry such as journalists and authors outnumbered actor invitees on the show. Perhaps, initially the show had a celebrity draw and as it gained in popularity, Jon had more liberty to include guests across industries or it could be that the audience was polled and shown to be an educated base that craved diversity and debate. Hence as the show gained in popularity and a wider viewerbase, the mix of guests invited on the show also changed to accommodate the changing audience?
+
+```{r ggplot demonstration}
+library(tidyverse)
+library(RCurl)
+library(fivethirtyeight)
+url <- getURLContent("https://raw.githubusercontent.com/tponnada/DATA607/master/daily_show_guests.csv")
+guests <- read_csv(url, skip = 1, col_names = c("Year", "Google_Knowledge_Occupation", "Show", "Group", "Raw_Guest_List"));guests
+guestfilter <- filter(guests, !((is.na(Google_Knowledge_Occupation)) | Google_Knowledge_Occupation == 0 | Google_Knowledge_Occupation == '-')); guestfilter
+guestfilter %>% group_by(Google_Knowledge_Occupation) %>% summarize(n_distinct(Google_Knowledge_Occupation))
+guestfilter %>% group_by(Group) %>% summarize(n_distinct(Group))
+ggplot(data = guestfilter) + geom_bar(mapping = aes(x = Group, color = Group, fill = Group)) + facet_wrap(~Year, nrow = 2) + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+```
